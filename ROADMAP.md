@@ -79,7 +79,7 @@ first; few high-value skills need it (pi-skills' youtube-transcript and browser-
 **What:** Emit APM `mcp:` entries and validate the output with the `apm` CLI in CI.
 **Why deferred:** APM's custom-server schema wasn't verified; the current export comments MCP
 servers out rather than guessing.
-**Prioritize when:** a team adopts APM from an `emit-apm` file (see HUMAN_TASKS H7).
+**Prioritize when:** a team adopts APM from an `emit-apm` file.
 
 ## P3
 

@@ -9,8 +9,8 @@ Maybe-someday ideas that don't earn a roadmap slot yet. Promote one to
 - **Auto-selected project profiles** — pick a profile from repo signals (`package.json` with
   `next` → web profile, `pyproject.toml` → Python profile).
 - **Time-boxed trials** — `trial: 14d` on an item; `sync` reminds you to keep or drop it.
-- **A `join` profile and a "new hire" profile** — onboarding skills for Join engineers
-  (repo map, deploy process, review norms). Belongs with the private Join skills repo.
+- **An employer profile and a "new hire" profile** — onboarding skills (repo map, deploy
+  process, review norms). Belongs in a private repo, not here.
 
 ## Discovery
 - **`agentfiles search <term>`** across all sources' skill names and descriptions.
