@@ -1,0 +1,19 @@
+description: Engineering leader - hiring, design reviews, docs, decks, spreadsheets and comms.
+extends: [base]
+
+plugins:
+  # design-review (RFC/design critique), interview-kit (competencies, loop, rubric)
+  - mine:@eng-leadership
+
+  # Anthropic's document skills: Word, PDF, PowerPoint, Excel - read, edit and create.
+  - anthropic-skills:@document-skills
+
+skills:
+  - anthropic-skills:skills/doc-coauthoring    # structured co-writing of specs, proposals, decision docs
+  - anthropic-skills:skills/internal-comms     # status reports, leadership updates, incident comms
+  - vercel:skills/writing-guidelines           # clear, concise technical writing
+
+# Optional integrations from OpenAI's plugin catalog. They need accounts and MCP auth;
+# their skills reach every tool, their MCP servers land in the snippet files.
+#  - openai-plugins:plugins/linear
+#  - openai-plugins:plugins/notion

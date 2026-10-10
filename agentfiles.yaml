@@ -1,0 +1,9 @@
+# Repo-wide settings. Per-machine overrides go in local.yaml (gitignored); see
+# examples/local.yaml.
+
+# Tools to install into when a profile does not say otherwise.
+# Known: claude-code, codex, cursor, opencode, pi
+targets: [claude-code, codex, cursor, opencode, pi]
+
+# What `agentfiles sync` installs when you give it no profile names.
+default_profiles: [base]

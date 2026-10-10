@@ -1,0 +1,16 @@
+description: Small, safe defaults for every machine and every persona.
+
+# Everything here should be useful no matter what you are doing, cheap in context
+# (only names + descriptions load until a skill is used), and free of hooks.
+
+plugins:
+  # commit-message, handoff-notes (resume work in another tool or session)
+  - mine:@essentials
+  # library-docs skill + Context7 MCP server for version-correct library docs.
+  # `allow: [mcp]` lets Claude Code install its (remote, read-only) MCP server natively.
+  - ref: mine:@research-tools
+    allow: [mcp]
+
+skills:
+  # The best way to grow this setup: turn a repeated workflow into a new skill.
+  - anthropic-skills:skills/skill-creator

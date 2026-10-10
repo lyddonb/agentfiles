@@ -1,0 +1,107 @@
+{
+  "items": {
+    "plugin:anthropic-claude-code:plugins/feature-dev": {
+      "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
+      "hash": "sha256:1e8cb8fa455dcedf40fa696296dff0029e1b12a0237badd612c36b36099ea6f4"
+    },
+    "plugin:anthropic-claude-code:plugins/pr-review-toolkit": {
+      "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
+      "hash": "sha256:d4ceca79a6b72d909843d6a3e0bc2c41ff529d155dee5549a55db2a0e83ebc38"
+    },
+    "plugin:anthropic-claude-code:plugins/security-guidance": {
+      "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
+      "hash": "sha256:5b3301f21cc460a9dc9a68a1f40d01cc5d9a812540128f4badd558e21574d71d"
+    },
+    "plugin:anthropic-skills:@document-skills": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "hash": "sha256:83b7d80ded3734b0a135631a4723b87be5605a782fbd118563828b6808910c33"
+    },
+    "plugin:obsidian:@obsidian": {
+      "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
+      "hash": "sha256:e04e29eacfbbe3fcc35eed950d2cf145544e731c6cd9206f884753f868dae03f"
+    },
+    "plugin:superpowers:@superpowers": {
+      "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+      "hash": "sha256:f52a63b66a086c242645f8b1c5f6b7117a41f2bbcc342065850ca1f06043a53c"
+    },
+    "skill:anthropic-skills:skills/doc-coauthoring": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "hash": "sha256:3a7276914af222a6178c78a8a085ae0bf75ea2dd98f8361066d73c88fa95c9f4"
+    },
+    "skill:anthropic-skills:skills/frontend-design": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "hash": "sha256:957f4e6fbc9fd94b6d43b13c9296c20acd954e0f666c72495c25987fff2360d2"
+    },
+    "skill:anthropic-skills:skills/internal-comms": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "hash": "sha256:0704060c6d427fb07e5ad41fd746afdab0b39912153e9235739f13fe367bc02f"
+    },
+    "skill:anthropic-skills:skills/mcp-builder": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "hash": "sha256:ed8fce3dbbb9c1d34105a8ac7226529b0f56217b032133504cf1ea45cde9788e"
+    },
+    "skill:anthropic-skills:skills/skill-creator": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "hash": "sha256:aebca8566c8d05f9b95599c5b09ef60ac2bdfae0182cdaff147751bc1f2943fa"
+    },
+    "skill:anthropic-skills:skills/webapp-testing": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "hash": "sha256:c0fba2237077ccd422ef5bcd496b7c94ade83a73a93be8a0997612690355881c"
+    },
+    "skill:vercel:skills/composition-patterns": {
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "hash": "sha256:c2728236aff18696806cab9b3bd49f542182864ef67d9c8f51b35cb3b2bc1864"
+    },
+    "skill:vercel:skills/react-best-practices": {
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "hash": "sha256:d559ab35ef79796694ffc40493c88984ba3a7dae549e0d98d7d56a6eb2a18dfb"
+    },
+    "skill:vercel:skills/web-design-guidelines": {
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "hash": "sha256:3b54e5a29ad780d937fbec6999da416571267c13a45a4008ef579952cb428286"
+    },
+    "skill:vercel:skills/writing-guidelines": {
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "hash": "sha256:17c5b026f1b9cca36dffbab03ecfd1644a15108a588a81654b43db26842545bc"
+    }
+  },
+  "sources": {
+    "anthropic-claude-code": {
+      "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
+      "git": "https://github.com/anthropics/claude-code",
+      "locked_at": "2026-10-10T03:43:19Z",
+      "ref": "main"
+    },
+    "anthropic-skills": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "git": "https://github.com/anthropics/skills",
+      "locked_at": "2026-10-10T03:43:17Z",
+      "ref": "main"
+    },
+    "obsidian": {
+      "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
+      "git": "https://github.com/kepano/obsidian-skills",
+      "locked_at": "2026-10-10T03:43:19Z",
+      "ref": "main"
+    },
+    "pi-skills": {
+      "commit": "90bb51cae36515a648515b633a81c0c6efc8c74d",
+      "git": "https://github.com/badlogic/pi-skills",
+      "locked_at": "2026-10-10T03:43:18Z",
+      "ref": "main"
+    },
+    "superpowers": {
+      "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+      "git": "https://github.com/obra/superpowers",
+      "locked_at": "2026-10-10T03:43:19Z",
+      "ref": "main"
+    },
+    "vercel": {
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "git": "https://github.com/vercel-labs/agent-skills",
+      "locked_at": "2026-10-10T03:43:18Z",
+      "ref": "main"
+    }
+  },
+  "version": 1
+}

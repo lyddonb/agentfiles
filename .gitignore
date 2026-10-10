@@ -1,0 +1,7 @@
+local.yaml
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+build/
+.DS_Store

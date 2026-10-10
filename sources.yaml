@@ -1,0 +1,58 @@
+# Upstream repositories that profiles can pull skills and plugins from.
+#
+# `ref` is what `agentfiles update` follows (branch or tag). The exact commit actually
+# installed is pinned in agentfiles.lock, so every machine gets identical content until
+# you review and accept an update.
+#
+# Refer to items in profiles as  <source>:<path>     e.g. anthropic-skills:skills/pdf
+#                            or  <source>:@<entry>   e.g. superpowers:@superpowers
+#                                                    (a plugin entry in that repo's marketplace)
+#
+# To develop against a local checkout without editing this file, put an override in
+# local.yaml (gitignored):
+#   source_overrides:
+#     mine: { path: ~/src/agent-kit }
+
+sources:
+  # Your own published skills and plugins (the agent-kit repo).
+  mine:
+    git: https://github.com/lyddonb/agent-kit
+    ref: main
+
+  # Anthropic's example and document skills (docx/pdf/pptx/xlsx, skill-creator, mcp-builder...).
+  anthropic-skills:
+    git: https://github.com/anthropics/skills
+    ref: main
+
+  # Claude Code's bundled plugins (code-review, pr-review-toolkit, feature-dev, security-guidance...).
+  # Mostly commands, agents and hooks, so they only do something in Claude Code.
+  anthropic-claude-code:
+    git: https://github.com/anthropics/claude-code
+    ref: main
+
+  # OpenAI's curated Codex plugins. Most are integrations that need accounts (Linear, Figma...).
+  # Note: github.com/openai/skills is deprecated in favor of this repo.
+  openai-plugins:
+    git: https://github.com/openai/plugins
+    ref: main
+
+  # Jesse Vincent's Superpowers: TDD, debugging, planning and review workflows. Ships
+  # manifests for many tools (Claude, Codex, Cursor, pi, OpenCode, ...).
+  superpowers:
+    git: https://github.com/obra/superpowers
+    ref: main
+
+  # Steph Ango's Obsidian skills (Obsidian Markdown, Bases, JSON Canvas, Obsidian CLI).
+  obsidian:
+    git: https://github.com/kepano/obsidian-skills
+    ref: main
+
+  # Vercel's skills: React/Next.js performance, composition, web design and writing guidelines.
+  vercel:
+    git: https://github.com/vercel-labs/agent-skills
+    ref: main
+
+  # Mario Zechner's pi skills (browser tools, transcripts, Google CLIs). Several need setup.
+  pi-skills:
+    git: https://github.com/badlogic/pi-skills
+    ref: main

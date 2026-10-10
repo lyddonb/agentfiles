@@ -1,0 +1,19 @@
+description: Example project profile - a web app repo. Copy and rename per project.
+extends: [builder]
+
+# Project profiles are normally used with --project so they install into one repo:
+#   cd ~/src/some-webapp && agentfiles sync --project example-webapp
+# or referenced from that repo's .agentfiles.yaml (`extends: [example-webapp]`).
+
+targets: [claude-code, codex, cursor]
+
+mcp:
+  # Browser automation for verifying UI changes.
+  playwright:
+    type: stdio
+    command: npx
+    args: ["-y", "@playwright/mcp@latest"]
+
+exclude:
+  skills:
+    - anthropic-skills:skills/mcp-builder    # not building MCP servers in this repo

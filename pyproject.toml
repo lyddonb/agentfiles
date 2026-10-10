@@ -1,0 +1,19 @@
+[project]
+name = "agentfiles"
+version = "0.1.0"
+description = "Profiles of AI agent skills and plugins, pinned and synced into Claude Code, Codex, Cursor, OpenCode and pi."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Beau Lyddon" }]
+dependencies = ["PyYAML>=6"]
+
+[project.scripts]
+agentfiles = "agentfiles.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["agentfiles"]

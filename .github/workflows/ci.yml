@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 14 * * 1"   # Mondays: report upstream updates waiting for review
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Unit tests (offline)
+        run: python3 -m unittest discover -s tests -v
+      - name: Config parses
+        run: bin/agentfiles doctor || true   # tools are absent in CI; config errors still print
+      - name: Lock covers every profile and hashes match upstream
+        run: bin/agentfiles lock --frozen
+
+  upstream-updates:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Show pending upstream changes (does not modify the lock)
+        run: bin/agentfiles update < /dev/null

@@ -1,0 +1,5 @@
+description: Beau's everyday machine - all three personas together.
+extends: [builder, eng-lead, knowledge]
+
+# Per-machine choice: set `default_profiles: [beau]` in local.yaml on your laptop so
+# a bare `agentfiles sync` installs this. Keep work-only items in a Join profile.

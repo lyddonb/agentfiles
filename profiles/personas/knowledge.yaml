@@ -1,0 +1,15 @@
+description: Personal knowledge work - Obsidian vaults, note capture, long-form writing.
+extends: [base]
+
+plugins:
+  # Obsidian Markdown (wikilinks, callouts, properties), Bases, JSON Canvas, Obsidian CLI,
+  # knap, and defuddle (clean article text from web pages for capture into the vault).
+  - obsidian:@obsidian
+
+skills:
+  - anthropic-skills:skills/doc-coauthoring    # structured drafting of essays, specs, decision docs
+
+# Considered and left out (see docs/PERSONAS.md):
+#  - pi-skills:youtube-transcript  needs `npm install` inside the skill folder, which agentfiles
+#                                  keeps read-only and hash-checked; revisit once ROADMAP R4
+#                                  (skill setup steps) lands.

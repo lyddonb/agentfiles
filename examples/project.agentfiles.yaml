@@ -1,0 +1,27 @@
+# Copy into a project as `.agentfiles.yaml`, then from the project run:
+#   agentfiles sync --project
+#
+# Installs into the project's .agents/skills (Codex, Cursor, OpenCode, pi) and into
+# Claude Code at "local" scope (this checkout only, not committed). Add
+# `.agentfiles/` to the project's .gitignore; decide whether to commit .agents/skills
+# links (usually not - they point into your local cache).
+#
+# Same keys as a profile. `extends` pulls in any profile from your agentfiles repo.
+
+description: Next.js app deployed on Vercel.
+extends: [builder]
+
+targets: [claude-code, codex, cursor]
+
+skills:
+  - vercel:skills/deploy-to-vercel
+
+mcp:
+  playwright:
+    type: stdio
+    command: npx
+    args: ["-y", "@playwright/mcp@latest"]
+
+exclude:
+  skills:
+    - anthropic-skills:skills/mcp-builder    # not building MCP servers here

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Run agentfiles straight from a checkout: no install needed (PyYAML required).
+# Put this directory on your PATH, or symlink this script into ~/.local/bin.
+set -euo pipefail
+here="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+export AGENTFILES_HOME="${AGENTFILES_HOME:-$here}"
+exec env PYTHONPATH="$here${PYTHONPATH:+:$PYTHONPATH}" python3 -m agentfiles "$@"

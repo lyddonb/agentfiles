@@ -1,0 +1,30 @@
+description: Hands-on engineer shipping code - planning, TDD, debugging, review, frontend.
+extends: [base]
+
+plugins:
+  # Superpowers: brainstorming -> plan -> TDD -> systematic debugging -> review -> finish branch.
+  # Its skills reach every tool. In Claude Code it also installs a SessionStart hook that
+  # reminds the agent to use the skills, so it needs `allow: [hooks]`.
+  # Review: https://github.com/obra/superpowers/tree/main/hooks
+  - ref: superpowers:@superpowers
+    allow: [hooks]
+
+  # Claude Code-only extras (commands and subagents; no portable skills):
+  - anthropic-claude-code:plugins/pr-review-toolkit   # specialized review agents (tests, types, errors, comments)
+  - anthropic-claude-code:plugins/feature-dev         # /feature-dev: explore -> architect -> implement -> review
+
+  # Security review in three layers: regex warnings on edits, an LLM review of the diff
+  # when Claude finishes a turn, and an agentic review on `git commit`. Implemented as
+  # Claude Code hooks (Python). Trade-offs: the turn-end and commit reviews make extra
+  # model calls (cost + latency), and the SessionStart hook installs the Agent SDK on
+  # first run. Remove this entry if that is not worth it for you.
+  - ref: anthropic-claude-code:plugins/security-guidance
+    allow: [hooks]
+
+skills:
+  - anthropic-skills:skills/webapp-testing     # drive a local web app with Playwright to verify UI changes
+  - anthropic-skills:skills/mcp-builder        # build MCP servers well
+  - anthropic-skills:skills/frontend-design    # distinctive, non-generic UI
+  - vercel:skills/react-best-practices         # React / Next.js performance rules
+  - vercel:skills/composition-patterns         # React component composition
+  - vercel:skills/web-design-guidelines        # UI/UX/accessibility review checklist
