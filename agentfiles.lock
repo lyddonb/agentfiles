@@ -16,6 +16,18 @@
       "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
       "hash": "sha256:83b7d80ded3734b0a135631a4723b87be5605a782fbd118563828b6808910c33"
     },
+    "plugin:mine:@eng-leadership": {
+      "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
+      "hash": "sha256:97b8fcfa78f0d8d2257e9af413193b0eb8161225c646394d272693fbf9531e44"
+    },
+    "plugin:mine:@essentials": {
+      "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
+      "hash": "sha256:77bc2020fd77526d81c51e003c032eef904f851a28a117cfb148ac00f9127515"
+    },
+    "plugin:mine:@research-tools": {
+      "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
+      "hash": "sha256:09102b7d7a40d63c9c537709be8ce3b12ec23dd8038c77037e402980d9d9d2a0"
+    },
     "plugin:obsidian:@obsidian": {
       "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
       "hash": "sha256:e04e29eacfbbe3fcc35eed950d2cf145544e731c6cd9206f884753f868dae03f"
@@ -76,6 +88,12 @@
       "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
       "git": "https://github.com/anthropics/skills",
       "locked_at": "2026-10-10T03:43:17Z",
+      "ref": "main"
+    },
+    "mine": {
+      "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
+      "git": "https://github.com/lyddonb/agent-kit",
+      "locked_at": "2026-10-10T04:17:18Z",
       "ref": "main"
     },
     "obsidian": {
