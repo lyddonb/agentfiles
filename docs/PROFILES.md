@@ -45,6 +45,11 @@ plugins:                        # plugins: native in Claude Code, skills everywh
     allow: [hooks]                       # permit code-running components (see SECURITY.md)
     explode: true                        # also share its skills via ~/.agents/skills (default true)
     native: true                         # install natively in Claude Code when possible (default true)
+  - ref: podcast-studio:@podcast-studio
+    requires:                            # setup agentfiles can't do for you; checked on sync/plan
+      commands: [python3, ffmpeg]        # must be on PATH
+      env: [GEMINI_API_KEY]              # must be set in the shell you run sync from
+      note: Install ffmpeg and get a key at https://aistudio.google.com/apikey.
 
 mcp:                            # MCP servers (Agent Plugins shape)
   docs:
@@ -75,6 +80,25 @@ exclude:                        # drop items inherited through `extends`
 
 Skills install under their frontmatter `name` (the spec says it must match the folder; when
 an upstream breaks that rule, agentfiles warns and uses the frontmatter name).
+
+### Manual setup (`requires:`)
+
+Some skills and plugins need things agentfiles does not install: system commands, API keys,
+feature flags. Declare them with `requires:` on the item (skills and plugins alike). After
+every `sync` and `plan`, a **Manual setup** section checks each one in your current shell:
+
+```
+==> Manual setup
+  ok  gdp-ts:skills/gdp-ts
+  !!  podcast-studio:@podcast-studio
+        not on PATH: ffmpeg
+        not set in this shell: GEMINI_API_KEY
+        Install ffmpeg and get a key at https://aistudio.google.com/apikey.
+```
+
+The note is shown only while something is missing. The env check sees only the shell that
+runs agentfiles, so a key kept in a project `.env` file still shows as missing; say so in
+the note when a tool accepts that.
 
 ### Merging rules
 

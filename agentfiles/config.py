@@ -39,6 +39,7 @@ class Item:
     explode: bool = True           # also share a plugin's skills via ~/.agents/skills
     native: bool = True            # install natively in Claude Code when possible
     origin: str = ""               # profile that declared it
+    requires: dict = field(default_factory=dict)  # {commands, env, note}: manual setup, checked on sync
 
     @property
     def key(self) -> str:
@@ -89,7 +90,7 @@ def parse_item(raw, kind: str, origin: str) -> Item:
         raw = {"ref": raw}
     if not isinstance(raw, dict) or "ref" not in raw:
         raise AgentfilesError(f"profile {origin}: each {kind} must be a string or a mapping with 'ref'")
-    unknown = set(raw) - {"ref", "allow", "explode", "native", "note"}
+    unknown = set(raw) - {"ref", "allow", "explode", "native", "note", "requires"}
     if unknown:
         raise AgentfilesError(f"profile {origin}: unknown keys {sorted(unknown)} on {raw['ref']}")
     source, path, entry = parse_ref(str(raw["ref"]), kind)
@@ -99,7 +100,23 @@ def parse_item(raw, kind: str, origin: str) -> Item:
         raise AgentfilesError(f"profile {origin}: allow {sorted(bad)} not in {list(ALLOWABLE)}")
     return Item(kind=kind, ref=f"{source}:{('@' + entry) if entry else path}", source=source,
                 path=path, entry=entry, allow=allow, explode=bool(raw.get("explode", True)),
-                native=bool(raw.get("native", True)), origin=origin)
+                native=bool(raw.get("native", True)), origin=origin,
+                requires=parse_requires(raw.get("requires"), f"profile {origin}: {raw['ref']}"))
+
+
+def parse_requires(raw, where: str) -> dict:
+    """`requires:` lists what an item needs that agentfiles cannot install: commands on PATH,
+    environment variables, and a free-text note on how to set them up."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise AgentfilesError(f"{where}: requires must be a mapping with commands, env and/or note")
+    unknown = set(raw) - {"commands", "env", "note"}
+    if unknown:
+        raise AgentfilesError(f"{where}: unknown keys {sorted(unknown)} in requires")
+    out = {k: [str(x) for x in raw.get(k) or []] for k in ("commands", "env")}
+    out["note"] = " ".join(str(raw.get("note") or "").split())
+    return out
 
 
 def parse_profile(name: str, data: dict, file: Path | None = None) -> Profile:

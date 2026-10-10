@@ -29,8 +29,21 @@ when used. Measured with `claude plugin details` in Claude Code:
 | builder | 7 | ~4,900 tokens |
 | beau | 10 | ~7,100 tokens |
 
-If `beau` feels heavy, sync personas per project instead of everything globally:
+The counts above predate gdp-ts, promo, claude-api, podcast-studio and fast-jev-compaction;
+re-measure after syncing. If `beau` feels heavy, sync personas per project instead of everything globally:
 `base` globally, `builder` via `.agentfiles.yaml` in code repos.
+
+### Setup checklist
+
+Items that need more than `agentfiles sync`. Each declares this in its profile with
+`requires:`, and `sync`/`plan` print a **Manual setup** section listing what is still missing.
+
+| Item | Profiles | Install | Configure |
+|---|---|---|---|
+| `podcast-studio` | base | Python 3.9+, `ffmpeg` (`brew install ffmpeg`) | `GEMINI_API_KEY` ([free key](https://aistudio.google.com/apikey)) in your env or `podcast/.env.local` |
+| `promo` | builder, eng-lead, knowledge | Node.js, `ffmpeg`; the agent may add rendering tools per video | `OPENROUTER_API_KEY` in your env or the project's `.env` (about $0.50 to $1.50 per video), or local TTS |
+| `fast-jev-compaction` | beau | nothing | `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `TYPESAFE_API_KEY` in your shell profile (the key can go in the plugin's `apiKey` option instead) |
+| `webapp-testing` | builder | Python Playwright in the project | nothing |
 
 ---
 
@@ -41,6 +54,8 @@ If `beau` feels heavy, sync personas per project instead of everything globally:
 | `essentials` plugin: `commit-message`, `handoff-notes` | agent-kit | Commit messages from the staged diff; hand work between sessions and tools (Claude Code ⇄ Codex ⇄ pi) without re-explaining |
 | `research-tools` plugin: `library-docs` + Context7 MCP | agent-kit | Version-correct library docs instead of memory. `allow: [mcp]` because it ships a (remote, read-only) MCP server |
 | `skill-creator` | anthropics/skills | The fastest way to grow this setup: turn a repeated workflow into a skill, then publish it in agent-kit |
+| `claude-api` | anthropics/skills | Claude API/SDK reference, and the eval guides in `shared/evals/` (build an eval, audit one, hill-climb quality or cost against it). The eval guides are part of this skill, not a skill on their own. Claude Code also has a built-in `claude-api`; this copy keeps the same version in every tool |
+| `podcast-studio` plugin: `podcast-setup`, `make-podcast` | benogren/podcast-studio | Turn notes, articles, PDFs or transcripts into a multi-host podcast MP3. Needs Python 3.9+, `ffmpeg` and a `GEMINI_API_KEY`. `podcast-setup` copies `../../template/` from the plugin folder, so it is most reliable in Claude Code (native plugin) |
 
 ## builder — shipping code
 
@@ -56,6 +71,8 @@ If `beau` feels heavy, sync personas per project instead of everything globally:
 | `vercel-react-best-practices` | vercel-labs/agent-skills | React/Next.js performance rules | Installs under its frontmatter name |
 | `vercel-composition-patterns` | vercel-labs/agent-skills | Component composition and API design | |
 | `web-design-guidelines` | vercel-labs/agent-skills | UI, UX and accessibility review checklist | |
+| `gdp-ts` | rauchg/gdp-ts | Authorization and other preconditions as compile-time proofs in TypeScript ("Ghosts of Departed Proofs") | Only triggers in codebases that use, or are adopting, the `gdp-ts` library |
+| `promo` | h14h/explainers | Narrated explainer videos rendered from a generated JS animation to MP4 | In all three personas. Needs `OPENROUTER_API_KEY` (about $0.50 to $1.50 per video) or local TTS; the agent may install rendering tools |
 
 ## eng-lead — running the engineering org
 
@@ -66,6 +83,7 @@ If `beau` feels heavy, sync personas per project instead of everything globally:
 | `doc-coauthoring` | anthropics/skills | Structured co-writing of proposals, specs and decision docs |
 | `internal-comms` | anthropics/skills | Status reports, leadership updates, incident comms, FAQs |
 | `writing-guidelines` | vercel-labs/agent-skills | Clear, concise writing rules for docs and announcements |
+| `promo` | h14h/explainers | Explainer videos for launches, onboarding and all-hands (see builder) |
 
 Optional (commented in the profile): OpenAI's `linear` and `notion` plugins if you use those
 tools — they need account auth.
@@ -76,9 +94,18 @@ tools — they need account auth.
 |---|---|---|
 | `obsidian` plugin: `obsidian-markdown`, `obsidian-bases`, `json-canvas`, `obsidian-cli`, `knap`, `defuddle` | kepano/obsidian-skills (Steph Ango, Obsidian) | Agents write proper Obsidian flavored Markdown (wikilinks, callouts, properties), Bases and Canvas files, and can drive the Obsidian CLI; `defuddle` extracts clean article text for capture |
 | `doc-coauthoring` | anthropics/skills | Long-form drafting |
+| `promo` | h14h/explainers | Turn a topic you are researching into an explainer video (see builder) |
 
 Considered and left out: `pi-skills/youtube-transcript` needs `npm install` inside its folder,
 which agentfiles deliberately keeps immutable and hash-checked (see ROADMAP R4).
+
+## beau — your laptop
+
+`builder` + `eng-lead` + `knowledge`, plus:
+
+| Item | From | Why | Notes |
+|---|---|---|---|
+| `fast-jev-compaction` plugin | tamaratran/fast-jev-compaction | Replaces Claude Code's lossy compaction summary: TypeSafe's Jev model scores every tool call and result, stale ones are dropped or truncated, and everything kept stays verbatim | Claude Code only. `allow: [hooks]` (an early-access function-hook module). Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `TYPESAFE_API_KEY`. **Sends the session transcript to TypeSafe** on each compaction, which is why it is in `beau` and not `base` |
 
 ## example-webapp — project profile
 

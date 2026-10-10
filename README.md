@@ -36,18 +36,22 @@ agentfiles sync builder                    # do it
 agentfiles doctor                          # check tools and duplicates
 ```
 
-Restart running agents afterwards so they pick up new skills.
+Restart running agents afterwards so they pick up new skills. `sync` ends with a
+**Manual setup** section listing anything you still have to install or configure yourself
+(API keys, `ffmpeg`, feature flags); see the [setup checklist](docs/PERSONAS.md#setup-checklist).
 
 ## Profiles in this repo
 
 | Profile | For | Highlights |
 |---|---|---|
-| `base` | every machine | `commit-message`, `handoff-notes`, `library-docs` + Context7 MCP, `skill-creator` |
-| `builder` | shipping code | Superpowers (plan → TDD → debug → review), PR review agents, feature-dev, security guidance, webapp testing, React/Next.js and web design guidelines |
+| `base` | every machine | `commit-message`, `handoff-notes`, `library-docs` + Context7 MCP, `skill-creator`, `claude-api` (with eval guides), podcast-studio |
+| `builder` | shipping code | Superpowers (plan → TDD → debug → review), PR review agents, feature-dev, security guidance, webapp testing, React/Next.js and web design guidelines, gdp-ts |
 | `eng-lead` | leading an eng org | design reviews, interview kits, Word/PDF/PowerPoint/Excel skills, doc co-authoring, internal comms, writing guidelines |
 | `knowledge` | Obsidian / research | Obsidian Markdown, Bases, Canvas, CLI, defuddle, YouTube transcripts |
-| `beau` | your laptop | `builder` + `eng-lead` + `knowledge` |
+| `beau` | your laptop | `builder` + `eng-lead` + `knowledge` + fast-jev-compaction (Claude Code) |
 | `example-webapp` | a project | `builder` + Playwright MCP, scoped to one repo |
+
+All three personas also get `promo` (explainer videos).
 
 Why each item is there, setup notes, and context cost: **[docs/PERSONAS.md](docs/PERSONAS.md)**.
 
