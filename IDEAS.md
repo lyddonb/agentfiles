@@ -28,3 +28,11 @@ Maybe-someday ideas that don't earn a roadmap slot yet. Promote one to
 - **Shell completion** for profile and source names.
 - **`agentfiles diff PROFILE_A PROFILE_B`** to compare personas.
 - **Menu-bar / TUI picker** for switching personas quickly. Probably overkill.
+
+## Modes
+- **Mode per directory.** Let `~/code/<work-folder>` default to one mode and personal repos to
+  another, without a `.agentfiles.yaml` in each.
+- **`agentfiles mode <name>`** to switch the always-on mode for a while (for example to
+  `superpowers` for a week) and switch back.
+- **Show the active mode in each tool's status line** where the tool allows it.
+

@@ -94,3 +94,50 @@ versioned together.
 **What:** Adapters for Gemini CLI, Amp, Droid, Kiro, GitHub Copilot CLI, etc.
 **Why deferred:** Several already read `~/.agents/skills`; add a named target only when one
 needs something extra (its own skills path, MCP format, or plugin install).
+
+---
+
+# Modes, roles and always-on instructions
+
+Deferred from the first modes build (October 2026).
+
+## P1
+
+### R11. Verify the always-on block in each tool
+**What:** After a sync, confirm each tool actually loads the block: Claude Code from
+`~/.claude/rules/`, Codex from `~/.codex/AGENTS.md`, pi from `~/.pi/agent/AGENTS.md`, and the
+pasted Cursor User Rule. Ask each agent "what instructions did you load about beau-mode?"
+**Why not done:** The paths come from each tool's current docs; only Claude Code's CLI was
+available while building, and it was not signed in as you.
+**Blocked by:** HUMAN_TASKS H9.
+
+### R12. Write Cursor User Rules and OpenCode `instructions` automatically
+**What:** Replace the paste-in snippets: add the snippet path to the `instructions` list in
+`opencode.json` (keeping comments, since OpenCode allows JSONC), and find a supported way to set
+Cursor User Rules from outside the app.
+**Why not done:** OpenCode's config can contain comments a plain JSON writer would drop. Cursor
+stores User Rules in its own settings with no documented file. Snippets are correct and safe.
+**Prioritize when:** you change the always-on text more than about once a month.
+
+### R13. Cross-model roles through other agent CLIs
+**What:** Accept role entries such as `cli:cursor-agent:gpt-5` and write them to roles.yaml,
+paired with agent-kit's planned `second-opinion` script (agent-kit ROADMAP R11).
+**Why not done:** Depends on that script.
+**Prioritize when:** agent-kit R11 lands.
+
+## P2
+
+### R14. `agentfiles review-upstream`
+**What:** A command that walks a watched source's pending changes file by file and, for files that
+agent-kit adapted (listed in agent-kit's `docs/UPSTREAM.md`), shows the upstream diff next to
+our version so you can decide adopt, adapt or skip.
+**Why not done:** `agentfiles update pstack --diff` already shows the diff; the side-by-side view is
+a convenience until upstream changes arrive often.
+**Prioritize when:** reviewing pstack updates takes more than a few minutes.
+
+### R15. Knowledge base as a source
+**What:** Let a profile install a knowledge-base MCP server and point the always-on block at it,
+so every agent can query team conventions while it works. See agent-kit `docs/KNOWLEDGE.md`.
+**Why not done:** The knowledge base is its own follow-up project.
+**Prioritize when:** the KB has an MCP interface.
+
