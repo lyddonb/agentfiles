@@ -1,0 +1,12 @@
+description: obra/superpowers workflow (brainstorm, plan, TDD, debug, review). An alternative to beau-mode, not an addition.
+extends: [base]
+
+# Superpowers was in `builder` before beau-mode. Both are routers: Superpowers' SessionStart
+# hook tells the agent to check its skills before every response, and beau-mode tells it to
+# pick a playbook first. Running both makes agents follow two competing processes, so
+# `builder` now uses beau-mode and Superpowers lives here for when you want it instead:
+#   agentfiles sync superpowers            # instead of builder, or in a project's .agentfiles.yaml
+# Review the hook before allowing it: https://github.com/obra/superpowers/tree/main/hooks
+plugins:
+  - ref: superpowers:@superpowers
+    allow: [hooks]

@@ -1,13 +1,17 @@
-description: Hands-on engineer shipping code - planning, TDD, debugging, review, frontend.
+description: Hands-on engineer shipping code with beau-mode - playbooks, principles, verification, review, frontend.
 extends: [base]
 
+# beau-mode is the way of working here: every non-trivial task goes through a playbook,
+# named principles, and proof on the real artifact. `mode` makes agentfiles write an
+# always-on instruction into each tool telling the agent to use it.
+mode: beau-mode
+
 plugins:
-  # Superpowers: brainstorming -> plan -> TDD -> systematic debugging -> review -> finish branch.
-  # Its skills reach every tool. In Claude Code it also installs a SessionStart hook that
-  # reminds the agent to use the skills, so it needs `allow: [hooks]`.
-  # Review: https://github.com/obra/superpowers/tree/main/hooks
-  - ref: superpowers:@superpowers
-    allow: [hooks]
+  # bstack: beau-mode + playbooks, how, interrogate, verify-work, show-me-your-work,
+  # figure-it-out, reflect, correct, unslop, and the beau-agent subagent (Claude Code, Cursor).
+  - mine:@bstack
+  # The 24 named principles beau-mode cites ("prove it works", "subtract before you add", ...).
+  - mine:@principles
 
   # Claude Code-only extras (commands and subagents; no portable skills):
   - anthropic-claude-code:plugins/pr-review-toolkit   # specialized review agents (tests, types, errors, comments)
@@ -20,6 +24,16 @@ plugins:
   # first run. Remove this entry if that is not worth it for you.
   - ref: anthropic-claude-code:plugins/security-guidance
     allow: [hooks]
+
+# Which model each subagent role uses, per tool (written to ~/.agents/roles.yaml).
+# Review panels get their value from model diversity, so `reviewers` lists two families
+# where the tool has them. Leave a tool out to use whatever model the session runs on.
+# Machine-specific overrides go in local.yaml under the same `roles:` key.
+roles:
+  code:      {claude-code: sonnet, cursor: grok-4.7-xhigh-fast}
+  judgment:  {claude-code: opus,   cursor: claude-opus-5-5-xhigh}
+  explorer:  {claude-code: sonnet, cursor: grok-4.7-xhigh-fast}
+  reviewers: {claude-code: [opus, sonnet], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
 
 skills:
   - anthropic-skills:skills/webapp-testing     # drive a local web app with Playwright to verify UI changes

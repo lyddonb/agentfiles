@@ -13,6 +13,7 @@ Everything listed was checked to exist upstream and installs cleanly with
 | running the eng org: hiring, reviews, planning, comms | `eng-lead` |
 | working in an Obsidian vault | `knowledge` |
 | on your own laptop | `beau` (set `default_profiles: [beau]` in `local.yaml`) |
+| wanting obra/superpowers' workflow instead of beau-mode | `superpowers` (instead of `builder`) |
 
 Profiles combine freely: `agentfiles sync builder eng-lead`.
 
@@ -61,7 +62,9 @@ Items that need more than `agentfiles sync`. Each declares this in its profile w
 
 | Item | From | Why | Notes |
 |---|---|---|---|
-| **Superpowers** plugin (15 skills) | obra/superpowers | A complete workflow: brainstorming → writing plans → TDD → systematic debugging → requesting/receiving review → finishing a branch, plus git worktrees and parallel subagents | `allow: [hooks]`: in Claude Code a SessionStart hook injects `using-superpowers`, which strongly pushes the agent to check for and use skills before acting. Expect more deliberate (slower) starts. Other tools get the skills without the hook |
+| **bstack** plugin: `beau-mode` + 12 playbooks, `how`, `interrogate`, `verify-work`, `show-me-your-work`, `figure-it-out`, `reflect`, `correct`, `unslop`, `beau-agent` | agent-kit | The way of working: each non-trivial task gets a playbook, named principles, proof on the real artifact, and a decision trail for unattended runs. Adapted from Lauren Tan's pstack to work in every tool | `mode: beau-mode` makes it always on. About 1,200 always-on tokens in Claude Code. Guide: agent-kit `docs/BSTACK.md` |
+| **principles** plugin | agent-kit | 24 named rules ("prove it works", "subtract before you add", ...) that beau-mode cites and you can steer with by name | One skill, about 120 always-on tokens |
+| Model roles | this profile | `code`, `judgment`, `explorer` and `reviewers` per tool, written to `~/.agents/roles.yaml` | Cursor model ids come from pstack's defaults; confirm yours (HUMAN_TASKS H10) |
 | `pr-review-toolkit` plugin | anthropics/claude-code | Six specialized review agents: general code review, tests, silent failures, type design, comments, simplification | Claude Code only (agents + commands) |
 | `feature-dev` plugin | anthropics/claude-code | `/feature-dev`: explore → clarify → architect → implement → review, with dedicated agents | Claude Code only |
 | `security-guidance` plugin | anthropics/claude-code | Regex warnings on risky edits, an LLM review of the diff at turn end, agentic review on `git commit` | `allow: [hooks]`; extra model calls (cost/latency); installs the Agent SDK on first session. Claude Code only. Drop it if the cost isn't worth it |
@@ -73,6 +76,10 @@ Items that need more than `agentfiles sync`. Each declares this in its profile w
 | `web-design-guidelines` | vercel-labs/agent-skills | UI, UX and accessibility review checklist | |
 | `gdp-ts` | rauchg/gdp-ts | Authorization and other preconditions as compile-time proofs in TypeScript ("Ghosts of Departed Proofs") | Only triggers in codebases that use, or are adopting, the `gdp-ts` library |
 | `promo` | h14h/explainers | Narrated explainer videos rendered from a generated JS animation to MP4 | In all three personas. Needs `OPENROUTER_API_KEY` (about $0.50 to $1.50 per video) or local TTS; the agent may install rendering tools |
+
+Superpowers used to be in `builder`. It is now the `superpowers` add-on profile: it and
+beau-mode are both routers (Superpowers' SessionStart hook makes the agent check its skills
+before every response), and running both makes agents follow two competing processes. Pick one.
 
 ## eng-lead — running the engineering org
 
