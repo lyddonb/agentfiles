@@ -14,7 +14,7 @@ from .config import KNOWN_TARGETS, Config, Profile, parse_profile
 from .resolve import build_plan, verify_and_lock
 from .store import Store
 from .targets import Applier, Desired, Scope, desired_state
-from .util import AgentfilesError, confirm, info, read_json, read_yaml, repo_root, step, warn
+from .util import AgentfilesError, confirm, info, read_json, read_yaml, repo_root, short, step, warn
 
 PROJECT_FILE = ".agentfiles.yaml"
 
@@ -109,11 +109,14 @@ def cmd_uninstall(args) -> int:
 
 
 def _paths_used(cfg: Config, source: str) -> list[str]:
+    """Paths to review on update: what profiles use, else what the source says to watch."""
     paths = set()
     for prof in cfg.profiles.values():
         for it in prof.skills + prof.plugins:
             if it.source == source:
                 paths.add(it.path if it.path else ".")
+    if not paths:
+        paths = set(cfg.sources[source].watch)
     return sorted(paths)
 
 
@@ -171,6 +174,11 @@ def cmd_list(args) -> int:
         return 0
     r = cfg.resolve(args.profiles)
     info(f"Resolved: {', '.join(r.profiles)}  ·  targets: {', '.join(r.targets)}")
+    if r.mode:
+        info(f"Mode: {r.mode}")
+    if r.roles:
+        info("Roles: " + "; ".join(f"{role}: " + ", ".join(f"{t}={m}" for t, m in tools.items())
+                                   for role, tools in r.roles.items()))
     info("\nSkills:")
     for it in r.skills:
         info(f"  {it.ref}   [{it.origin}]")
@@ -203,6 +211,10 @@ def cmd_status(args) -> int:
     info(f"Claude Code agentfiles plugin skills ({len(gen)}): " + ", ".join(sorted(gen)))
     info(f"Claude Code plugins: {', '.join(c.get('plugins') or []) or '(none)'}")
     info(f"Claude Code MCP servers: {', '.join(c.get('mcp') or {}) or '(none)'}")
+    instr = state.get("instructions") or {}
+    info(f"Always-on instructions: {', '.join(short(p) for p in instr) or '(none)'}")
+    roles = state.get("roles") or {}
+    info(f"Model roles file: {short(roles['path']) if roles.get('path') else '(none)'}")
     lock = read_json(repo_root() / "agentfiles.lock", default={}) or {}
     if lock.get("sources"):
         info("\nLocked sources:")

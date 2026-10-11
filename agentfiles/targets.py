@@ -25,6 +25,7 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import instructions as ins
 from .resolve import Plan, Skill
 from .util import (AgentfilesError, data_dir, info, ok, read_json, removed, run, same, short,
                    state_dir, step, warn, write_json)
@@ -78,6 +79,7 @@ class Desired:
     claude_native: dict[str, dict] = field(default_factory=dict) # plugin name -> {root, entry, skills, ref}
     claude_mcp: dict[str, dict] = field(default_factory=dict)
     snippet_mcp: dict[str, dict] = field(default_factory=dict)
+    instructions: "ins.InstructionsPlan | None" = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -146,9 +148,53 @@ def desired_state(plan: Plan, scope: Scope) -> Desired:
             snippets.update(p.mcp)
         snippets.update(plan.resolved.mcp)
         d.snippet_mcp = snippets
+    d.instructions = _instructions_plan(plan, scope)
     if scope.is_project:
         _skip_globally_installed(d)
     return d
+
+
+def _installed_skill_names(plan: Plan) -> set[str]:
+    names = {s.name for s in plan.skills}
+    for p in plan.plugins:
+        names |= {s.name for s in p.skills}
+    return names
+
+
+def _instructions_plan(plan: Plan, scope: Scope) -> "ins.InstructionsPlan":
+    r = plan.resolved
+    if r.mode and r.mode not in _installed_skill_names(plan):
+        raise AgentfilesError(
+            f"mode {r.mode!r} is not a skill these profiles install. Add the plugin or skill that "
+            f"provides it, or change `mode:`.")
+    inputs = {"mode": r.mode, "instructions": r.instructions, "roles": r.roles}
+    mode, extra, roles = r.mode, r.instructions, r.roles
+    if scope.is_project:
+        # Tools read user-level and project-level instructions together, so a project gets
+        # only what differs from the last global sync.
+        g = (read_json(state_dir() / "state.json", default={}) or {}).get("instructions_inputs") or {}
+        if mode == g.get("mode"):
+            mode = None
+        if roles == (g.get("roles") or {}):
+            roles = {}
+        extra = [t for t in extra if t not in (g.get("instructions") or [])]
+        if not (mode or extra or roles) and (r.mode or r.instructions or r.roles):
+            return ins.InstructionsPlan(
+                body="", roles_text="", inputs=inputs,
+                skipped_note="Always-on instructions and model roles match your global sync, so the "
+                             "project gets no copies (tools would read both and see them twice).")
+    roles_path = (scope.project / ".agents" / "roles.yaml") if scope.is_project else Path.home() / ".agents" / "roles.yaml"
+    shown = "`.agents/roles.yaml` in this project" if scope.is_project else "`~/.agents/roles.yaml`"
+    body = ins.render_body(r.profiles, mode, extra, shown if roles else None)
+    placements = (ins.project_placements(scope.project, r.targets) if scope.is_project
+                  else ins.global_placements(r.targets))
+    return ins.InstructionsPlan(
+        body=body,
+        roles_text=ins.render_roles(r.profiles, r.roles) if roles else "",
+        placements=placements if body else [],
+        roles_path=roles_path if roles else None,
+        inputs=inputs,
+    )
 
 
 def _skip_globally_installed(d: Desired) -> None:
@@ -406,13 +452,20 @@ class Applier:
         elif "claude-code" in targets or old_claude:
             self._apply_claude(d if "claude-code" in targets else Desired(), old_claude)
 
+        if d.instructions is not None or self.old.get("instructions") or self.old.get("roles"):
+            self._apply_instructions(d)
+
         if d.snippet_mcp:
             step("MCP snippets for Codex, Cursor and OpenCode")
             out = self.scope.generated_dir / "mcp"
             for fname, content in mcp_snippets(d.snippet_mcp).items():
-                self._do(lambda p=out / fname, c=content: (p.parent.mkdir(parents=True, exist_ok=True),
-                                                           p.write_text(c)))
-                ok(short(out / fname))
+                target = out / fname
+                if target.exists() and target.read_text() == content:
+                    same(short(target))
+                    continue
+                self._do(lambda p=target, c=content: (p.parent.mkdir(parents=True, exist_ok=True),
+                                                      p.write_text(c)))
+                ok(short(target))
             info("  (merge these into each tool's config; see docs/TARGETS.md)")
 
         if d.notes:
@@ -421,6 +474,119 @@ class Applier:
                 info(f"  - {n}")
         if not self.dry:
             write_json(self.scope.state_file, self.new)
+
+    # -------------------------------------------------- always-on instructions and roles
+    def _write_owned(self, path: Path, content: str, old_sha: str | None, label: str) -> str | None:
+        """Write a file agentfiles owns. Returns its sha, or None if left alone."""
+        if path.exists():
+            cur = path.read_text()
+            if cur == content:
+                same(label)
+                return ins.sha(content)
+            if old_sha is None:
+                warn(f"{short(path)} exists and was not written by agentfiles; leaving it alone")
+                return None
+            if ins.sha(cur) != old_sha:
+                warn(f"{short(path)} was edited by hand; leaving it alone (move your edits into a "
+                     f"profile's `instructions:`, then delete the file and sync)")
+                return None
+            self._do(lambda: path.write_text(content))
+            ok(f"{label} (updated)")
+            return ins.sha(content)
+        self._do(lambda: (path.parent.mkdir(parents=True, exist_ok=True), path.write_text(content)))
+        ok(label)
+        return ins.sha(content)
+
+    def _remove_owned(self, path: Path, old_sha: str, label: str) -> None:
+        if not path.exists():
+            return
+        if ins.sha(path.read_text()) != old_sha:
+            warn(f"{short(path)} was edited by hand; not removing it")
+            return
+        self._do(path.unlink)
+        removed(label)
+
+    def _apply_instructions(self, d: Desired) -> None:
+        step("Always-on instructions and model roles")
+        plan = d.instructions or ins.InstructionsPlan(body="", roles_text="")
+        old = self.old.get("instructions") or {}
+        new: dict[str, dict] = {}
+        wanted = {str(pl.path): pl for pl in plan.placements if pl.path is not None}
+
+        for path_s, pl in wanted.items():
+            path = Path(path_s)
+            label = f"instructions for {pl.tool}: {short(path)}"
+            prev = old.get(path_s) or {}
+            if pl.kind == "owned":
+                digest = self._write_owned(path, ins.wrap_owned(plan.body, pl.wrap), prev.get("sha"), label)
+                if digest:
+                    new[path_s] = {"kind": "owned", "sha": digest}
+                continue
+            existed = path.exists()
+            cur = path.read_text() if existed else ""
+            updated = ins.upsert_block(cur, plan.body)
+            if updated == cur:
+                same(label)
+            else:
+                self._do(lambda path=path, updated=updated: (path.parent.mkdir(parents=True, exist_ok=True),
+                                                             path.write_text(updated)))
+                ok(label + ("" if existed else " (created)"))
+            new[path_s] = {"kind": "block", "created": prev.get("created", not existed)}
+
+        for pl in plan.placements:
+            if pl.snippet is not None:
+                snip, body = pl.snippet, plan.body
+                if not snip.exists() or snip.read_text() != body:
+                    self._do(lambda snip=snip, body=body: (snip.parent.mkdir(parents=True, exist_ok=True),
+                                                           snip.write_text(body)))
+                    ok(f"instructions for {pl.tool}: {short(snip)} (paste-in snippet)")
+                else:
+                    same(f"instructions for {pl.tool}: {short(snip)} (paste-in snippet)")
+            if pl.note:
+                d.notes.append(pl.note)
+
+        for path_s, prev in old.items():
+            if path_s in wanted:
+                continue
+            path = Path(path_s)
+            label = f"instructions: {short(path)}"
+            if prev.get("kind") == "owned":
+                self._remove_owned(path, prev.get("sha", ""), label)
+            elif path.exists():
+                cur = path.read_text()
+                if ins.has_block(cur):
+                    rest = ins.remove_block(cur)
+                    if not rest and prev.get("created"):
+                        self._do(path.unlink)
+                    else:
+                        self._do(lambda path=path, rest=rest: path.write_text(rest))
+                    removed(label)
+        self.new["instructions"] = new
+
+        old_roles = self.old.get("roles") or {}
+        roles_state = {}
+        if plan.roles_path is not None:
+            digest = self._write_owned(plan.roles_path, plan.roles_text,
+                                       old_roles.get("sha") if old_roles.get("path") == str(plan.roles_path) else None,
+                                       f"model roles: {short(plan.roles_path)}")
+            if digest:
+                roles_state = {"path": str(plan.roles_path), "sha": digest}
+        if old_roles.get("path") and old_roles.get("path") != roles_state.get("path"):
+            self._remove_owned(Path(old_roles["path"]), old_roles.get("sha", ""),
+                               f"model roles: {short(old_roles['path'])}")
+        self.new["roles"] = roles_state
+        self.new["instructions_inputs"] = plan.inputs if (new or roles_state) else {}
+        if plan.skipped_note:
+            d.notes.append(plan.skipped_note)
+
+        if self.scope.is_project:
+            rels = [".agentfiles/"]
+            for path_s, st in new.items():
+                if st.get("kind") == "owned":
+                    rels.append(str(Path(path_s).relative_to(self.scope.project)))
+            if roles_state:
+                rels.append(str(Path(roles_state["path"]).relative_to(self.scope.project)))
+            ins.exclude_in_git(self.scope.project, rels, self.dry)
 
     def _apply_claude(self, d: Desired, old: dict) -> None:
         step(f"Claude Code ({self.scope.claude_scope} scope)")

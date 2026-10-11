@@ -248,3 +248,126 @@ class SyncTests(Fixture):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------------------- modes, roles, instructions
+
+from agentfiles import instructions as ins  # noqa: E402
+from agentfiles.cli import _paths_used  # noqa: E402
+
+
+class ModeAndRolesTests(Fixture):
+    def setUp(self):
+        super().setUp()
+        for k in ("CLAUDE_CONFIG_DIR", "CODEX_HOME", "PI_CODING_AGENT_DIR"):
+            self._env.setdefault(k, os.environ.get(k))
+            os.environ.pop(k, None)
+        write(self.repo / "profiles" / "moded.yaml", """
+            description: with a mode
+            extends: [base]
+            mode: alpha
+            instructions:
+              - Prefer small PRs.
+            roles:
+              judgment: {claude-code: opus}
+              reviewers: {claude-code: [opus, sonnet]}
+            """)
+
+    def test_roles_merge_and_machine_override(self):
+        write(self.repo / "local.yaml", "roles:\n  judgment: {claude-code: sonnet, cursor: x-model}\n")
+        r = Config(self.repo).resolve(["moded"])
+        self.assertEqual(r.mode, "alpha")
+        self.assertEqual(r.roles["judgment"], {"claude-code": "sonnet", "cursor": "x-model"})
+        self.assertEqual(r.roles["reviewers"], {"claude-code": ["opus", "sonnet"]})
+        self.assertEqual(r.instructions, ["Prefer small PRs."])
+
+    def test_bad_role_and_tool_rejected(self):
+        write(self.repo / "profiles" / "bad.yaml", "roles: {wizard: {claude-code: opus}}\n")
+        with self.assertRaisesRegex(AgentfilesError, "unknown role"):
+            Config(self.repo).resolve(["bad"])
+        write(self.repo / "profiles" / "bad.yaml", "roles: {code: {vim: opus}}\n")
+        with self.assertRaisesRegex(AgentfilesError, "unknown tool"):
+            Config(self.repo).resolve(["bad"])
+
+    def test_mode_must_be_installed(self):
+        write(self.repo / "profiles" / "ghost.yaml", "extends: [base]\nmode: nope\n")
+        code, out = self.run_cli("sync", "ghost", "--targets", "codex")
+        self.assertEqual(code, 2)
+        self.assertIn("mode 'nope' is not a skill", out)
+
+    def test_mode_can_be_cleared(self):
+        write(self.repo / "profiles" / "plain.yaml", "extends: [moded]\nmode: none\n")
+        self.assertIsNone(Config(self.repo).resolve(["plain"]).mode)
+
+    def test_block_upsert_is_idempotent_and_reversible(self):
+        original = "# Mine\n\nKeep this.\n"
+        once = ins.upsert_block(original, "Body one.\n")
+        self.assertEqual(ins.upsert_block(once, "Body one.\n"), once)
+        twice = ins.upsert_block(once, "Body two.\n")
+        self.assertIn("Body two.", twice)
+        self.assertNotIn("Body one.", twice)
+        self.assertEqual(ins.remove_block(twice), original)
+        self.assertEqual(ins.remove_block(ins.upsert_block("", "x\n")), "")
+
+    def test_sync_writes_instructions_and_roles_then_uninstall_restores(self):
+        codex_md = self.home / ".codex" / "AGENTS.md"
+        write(codex_md, "# My notes\n")
+        code, out = self.run_cli("sync", "moded", "--targets", "codex,claude-code,pi")
+        self.assertEqual(code, 0, out)
+        rules = self.home / ".claude" / "rules" / "agentfiles.md"
+        self.assertIn("load the `alpha` skill", rules.read_text())
+        self.assertIn("Prefer small PRs.", codex_md.read_text())
+        self.assertTrue(codex_md.read_text().startswith("# My notes"))
+        self.assertIn("reviewers", (self.home / ".agents" / "roles.yaml").read_text())
+        self.assertTrue((self.home / ".pi" / "agent" / "AGENTS.md").exists())
+
+        code, out = self.run_cli("sync", "moded", "--targets", "codex,claude-code,pi")
+        self.assertNotIn("+ instructions", out)          # second run changes nothing
+
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(codex_md.read_text(), "# My notes\n")
+        self.assertFalse(rules.exists())
+        self.assertFalse((self.home / ".agents" / "roles.yaml").exists())
+        self.assertFalse((self.home / ".pi" / "agent" / "AGENTS.md").exists())
+
+    def test_hand_edited_owned_file_is_left_alone(self):
+        self.run_cli("sync", "moded", "--targets", "claude-code")
+        rules = self.home / ".claude" / "rules" / "agentfiles.md"
+        rules.write_text(rules.read_text() + "my edit\n")
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertIn("edited by hand", out)
+        self.assertTrue(rules.exists())
+
+    def test_opencode_never_hides_claude_md(self):
+        write(self.home / ".claude" / "CLAUDE.md", "# global claude notes\n")
+        code, out = self.run_cli("sync", "moded", "--targets", "opencode")
+        self.assertEqual(code, 0, out)
+        self.assertFalse((self.home / ".config" / "opencode" / "AGENTS.md").exists())
+        self.assertIn("instructions` list", out)
+
+    def test_project_gets_only_differences(self):
+        self.run_cli("sync", "moded", "--targets", "claude-code")
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [moded]\ntargets: [claude-code]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        self.assertIn("match your global sync", out)
+        self.assertFalse((proj / ".claude" / "rules" / "agentfiles.md").exists())
+
+        write(proj / ".agentfiles.yaml",
+              "extends: [moded]\ntargets: [claude-code]\ninstructions: [Use pnpm here.]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        text = (proj / ".claude" / "rules" / "agentfiles.md").read_text()
+        self.assertIn("Use pnpm here.", text)
+        self.assertNotIn("alpha", text)                  # the mode line is already global
+
+    def test_watch_paths_used_for_unused_sources(self):
+        write(self.repo / "sources.yaml", f"""
+            sources:
+              up:
+                path: {self.up}
+              upstream-only:
+                git: https://example.com/x.git
+                watch: [pkg]
+            """)
+        self.assertEqual(_paths_used(Config(self.repo), "upstream-only"), ["pkg"])

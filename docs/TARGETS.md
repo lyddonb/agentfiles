@@ -76,6 +76,28 @@ still install a plugin natively by hand, for example
 `codex plugin marketplace add obra/superpowers` or `pi install git:github.com/obra/superpowers`
 — set `explode: false` on that plugin in your profile so its skills aren't installed twice.
 
+## Always-on instructions
+
+A profile's `mode`, `instructions` and `roles` become one Markdown block. agentfiles puts it where
+each tool reads global instructions, and never touches anything outside its own markers or files:
+
+| Tool | Global | Project (`sync --project`) |
+|---|---|---|
+| Claude Code | `~/.claude/rules/agentfiles.md` (a file agentfiles owns; Claude Code loads every file in `~/.claude/rules/`) | `.claude/rules/agentfiles.md` |
+| Codex | block between `agentfiles` markers in `~/.codex/AGENTS.md` (`AGENTS.override.md` if that is the active file; `CODEX_HOME` respected) | not written: Codex reads only the shared `AGENTS.md` |
+| pi | block in `~/.pi/agent/AGENTS.md`, or in whichever context file already exists there | not written |
+| OpenCode | block in `~/.config/opencode/AGENTS.md` if it exists or if `~/.claude/CLAUDE.md` doesn't; otherwise a snippet to add to `instructions` in `opencode.json` (creating that file would stop OpenCode reading your `~/.claude/CLAUDE.md`) | not written |
+| Cursor | a snippet at `~/.local/share/agentfiles/instructions/cursor-user-rule.md` to paste into Settings > Rules > User Rules (Cursor keeps them in its settings) | `.cursor/rules/agentfiles.mdc` with `alwaysApply: true` |
+
+Model roles go to `~/.agents/roles.yaml` (project: `.agents/roles.yaml`), which bstack skills read.
+
+Safety rules:
+- Shared files keep everything outside the markers byte for byte; `uninstall` removes only the block,
+  and deletes the file only if agentfiles created it and nothing else is left.
+- Files agentfiles owns are rewritten only if they still match what it last wrote. If you edited one,
+  `sync` and `uninstall` leave it alone and say so. Put the change in a profile's `instructions:`.
+- Project files are added to `.git/info/exclude`, so they never show up as changes to commit.
+
 ## Files agentfiles owns
 
 | Path | Contents |
@@ -85,6 +107,8 @@ still install a plugin natively by hand, for example
 | `~/.local/share/agentfiles/claude-marketplace/` | generated Claude marketplace |
 | `~/.local/share/agentfiles/mcp/` | MCP snippets |
 | `~/.local/state/agentfiles/state.json` | what the last global sync installed (used for pruning) |
+| `~/.claude/rules/agentfiles.md`, `~/.agents/roles.yaml` | always-on instructions for Claude Code; model roles |
+| `~/.local/share/agentfiles/instructions/` | paste-in instruction snippets (Cursor, sometimes OpenCode) |
 | `<project>/.agentfiles/` | the same three for a project (gitignore it) |
 
 `XDG_CACHE_HOME`, `XDG_DATA_HOME` and `XDG_STATE_HOME` are respected.

@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .util import AgentfilesError, read_yaml
+from .util import NAME_RE, AgentfilesError, read_yaml
 
 KNOWN_TARGETS = ("claude-code", "codex", "cursor", "opencode", "pi")
 ALLOWABLE = ("hooks", "mcp", "agents", "commands", "bin")
@@ -22,6 +22,7 @@ class Source:
     ref: str = "main"
     path: Path | None = None   # local directory source (development); never locked
     note: str = ""
+    watch: tuple[str, ...] = ()  # paths `update` reviews when no profile uses this source
 
     @property
     def is_local(self) -> bool:
@@ -56,6 +57,9 @@ class Profile:
     mcp: dict = field(default_factory=dict)
     exclude: dict = field(default_factory=dict)
     targets: list[str] | None = None
+    mode: str | None = None              # skill the always-on instructions point at ("" clears)
+    instructions: list[str] = field(default_factory=list)  # extra always-on text, in order
+    roles: dict = field(default_factory=dict)  # role -> {tool: model or [models]}
     file: Path | None = None
 
 
@@ -67,6 +71,9 @@ class Resolved:
     plugins: list[Item]
     mcp: dict
     targets: list[str]
+    mode: str | None = None
+    instructions: list[str] = field(default_factory=list)
+    roles: dict = field(default_factory=dict)
 
 
 # --------------------------------------------------------------------------- parsing
@@ -119,9 +126,50 @@ def parse_requires(raw, where: str) -> dict:
     return out
 
 
+ROLE_NAMES = ("code", "judgment", "explorer", "reviewers")
+
+
+def parse_roles(raw, where: str) -> dict:
+    """`roles:` maps a role to the model each tool should use for it.
+
+    roles:
+      judgment:  {claude-code: opus, cursor: claude-opus-5-5-xhigh}
+      reviewers: {claude-code: [opus, sonnet]}
+
+    `inherit` (or leaving a tool out) means: use the current model.
+    """
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise AgentfilesError(f"{where}: roles must map role names to {{tool: model}}")
+    out: dict = {}
+    for role, per_tool in raw.items():
+        if role not in ROLE_NAMES:
+            raise AgentfilesError(f"{where}: unknown role {role!r}; known: {', '.join(ROLE_NAMES)}")
+        if not isinstance(per_tool, dict):
+            raise AgentfilesError(f"{where}: roles.{role} must map tools to a model or a list of models")
+        for tool, model in per_tool.items():
+            if tool not in KNOWN_TARGETS:
+                raise AgentfilesError(f"{where}: roles.{role}: unknown tool {tool!r}; known: {', '.join(KNOWN_TARGETS)}")
+            if isinstance(model, list):
+                if not model or not all(isinstance(m, str) and m.strip() for m in model):
+                    raise AgentfilesError(f"{where}: roles.{role}.{tool}: list entries must be model names")
+            elif not (isinstance(model, str) and model.strip()):
+                raise AgentfilesError(f"{where}: roles.{role}.{tool}: must be a model name, a list, or inherit")
+        out[role] = dict(per_tool)
+    return out
+
+
+def merge_roles(base: dict, over: dict) -> dict:
+    out = {role: dict(tools) for role, tools in base.items()}
+    for role, tools in over.items():
+        out.setdefault(role, {}).update(tools)
+    return out
+
+
 def parse_profile(name: str, data: dict, file: Path | None = None) -> Profile:
     unknown = set(data) - {"name", "description", "extends", "skills", "plugins", "mcp",
-                           "exclude", "targets"}
+                           "exclude", "targets", "mode", "instructions", "roles"}
     if unknown:
         raise AgentfilesError(f"profile {name}: unknown keys {sorted(unknown)}")
     targets = data.get("targets")
@@ -138,8 +186,32 @@ def parse_profile(name: str, data: dict, file: Path | None = None) -> Profile:
         mcp=dict(data.get("mcp") or {}),
         exclude=dict(data.get("exclude") or {}),
         targets=list(targets) if targets is not None else None,
+        mode=_parse_mode(data, name),
+        instructions=_parse_instructions(data.get("instructions"), name),
+        roles=parse_roles(data.get("roles"), f"profile {name}"),
         file=file,
     )
+
+
+def _parse_mode(data: dict, name: str) -> str | None:
+    if "mode" not in data:
+        return None
+    mode = data["mode"]
+    if mode in (None, "", "none"):
+        return ""          # explicitly clears a mode set by an extended profile
+    if not isinstance(mode, str) or not NAME_RE.match(mode):
+        raise AgentfilesError(f"profile {name}: mode must be a skill name like beau-mode")
+    return mode
+
+
+def _parse_instructions(raw, name: str) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list) or not all(isinstance(x, str) for x in raw):
+        raise AgentfilesError(f"profile {name}: instructions must be a string or a list of strings")
+    return [x.strip() for x in raw if x.strip()]
 
 
 # --------------------------------------------------------------------------- repo config
@@ -169,8 +241,11 @@ class Config:
                     p = (self.root / p).resolve()
                 out[name] = Source(name=name, path=p, note=cfg.get("note", ""))
             elif "git" in cfg:
+                watch = cfg.get("watch") or []
+                if not isinstance(watch, list) or not all(isinstance(w, str) for w in watch):
+                    raise AgentfilesError(f"source {name}: watch must be a list of paths")
                 out[name] = Source(name=name, git=cfg["git"], ref=str(cfg.get("ref", "main")),
-                                   note=cfg.get("note", ""))
+                                   note=cfg.get("note", ""), watch=tuple(w.strip("/") for w in watch))
             else:
                 raise AgentfilesError(f"source {name}: needs 'git' or 'path'")
         return out
@@ -216,8 +291,17 @@ class Config:
         skills: dict[str, Item] = {}
         plugins: dict[str, Item] = {}
         mcp: dict = {}
+        mode: str | None = None
+        instructions: list[str] = []
+        roles: dict = {}
         targets = list(self.settings.get("targets") or KNOWN_TARGETS)
         for prof in order:
+            if prof.mode is not None:
+                mode = prof.mode or None
+            for text in prof.instructions:
+                if text not in instructions:
+                    instructions.append(text)
+            roles = merge_roles(roles, prof.roles)
             for kind, bucket in (("skills", skills), ("plugins", plugins)):
                 for ex in prof.exclude.get(kind) or []:
                     bucket.pop(f"{kind[:-1]}:{ex}", None)
@@ -237,5 +321,9 @@ class Config:
             if it.source not in self.sources:
                 raise AgentfilesError(
                     f"{it.ref} (profile {it.origin}): unknown source {it.source!r}; add it to sources.yaml")
+        # Per-machine role overrides (local.yaml / agentfiles.yaml) win over profiles,
+        # because which models you can use depends on the machine's subscriptions.
+        roles = merge_roles(roles, parse_roles(self.settings.get("roles"), "settings"))
         return Resolved(profiles=[p.name for p in order], skills=list(skills.values()),
-                        plugins=list(plugins.values()), mcp=mcp, targets=targets)
+                        plugins=list(plugins.values()), mcp=mcp, targets=targets,
+                        mode=mode, instructions=instructions, roles=roles)
