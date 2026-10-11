@@ -27,11 +27,12 @@ when used. Measured with `claude plugin details` in Claude Code:
 | base | 3 | ~400 tokens |
 | knowledge | 4 | ~1,200 tokens |
 | eng-lead | 5 | ~2,000 tokens |
-| builder | 7 | ~4,900 tokens |
-| beau | 10 | ~7,100 tokens |
+| builder | 9 | ~6,300 tokens (re-measured with bstack, October 11) |
+| beau | 13 | ~8,500 tokens (re-measured with bstack, October 11) |
 
-The counts above predate gdp-ts, promo, claude-api, podcast-studio and fast-jev-compaction;
-re-measure after syncing. If `beau` feels heavy, sync personas per project instead of everything globally:
+The base, knowledge and eng-lead counts predate gdp-ts, promo, claude-api, podcast-studio and
+fast-jev-compaction; re-measure after syncing. bstack and principles together add about 1,300
+tokens; dropping Superpowers from builder saved about 850. If `beau` feels heavy, sync personas per project instead of everything globally:
 `base` globally, `builder` via `.agentfiles.yaml` in code repos.
 
 ### Setup checklist
