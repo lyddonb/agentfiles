@@ -66,6 +66,16 @@ def render_roles(profiles: list[str], roles: dict) -> str:
 
 # --------------------------------------------------------------------------- blocks in shared files
 
+def marker_problem(text: str) -> str:
+    """Why the agentfiles markers in a file can't be edited safely, or "" when they can."""
+    begins = len(re.findall(r"<!-- BEGIN agentfiles\b", text))
+    ends = text.count(END)
+    if begins == ends and begins <= 1:
+        return ""
+    return (f"has {begins} BEGIN and {ends} END agentfiles markers; fix them by hand "
+            f"(one BEGIN and one END, or none) so agentfiles never deletes your text")
+
+
 def upsert_block(text: str, body: str) -> str:
     block = f"{BEGIN}\n{body}{END}\n"
     if BLOCK_RE.search(text):
@@ -77,6 +87,7 @@ def upsert_block(text: str, body: str) -> str:
 
 def remove_block(text: str) -> str:
     out = BLOCK_RE.sub("\n", text, count=1)
+    out = re.sub(r"\n{3,}", "\n\n", out)
     return out.strip("\n") + "\n" if out.strip() else ""
 
 
@@ -94,6 +105,7 @@ class Placement:
     snippet: Path | None = None
     note: str = ""
     wrap: str = "md"           # "md" or "mdc" (Cursor rule with alwaysApply frontmatter)
+    body: str | None = None    # overrides the shared body (Cursor's project copy is always complete)
 
 
 def _first_existing(base: Path, names: list[str]) -> Path | None:
@@ -122,7 +134,11 @@ def global_placements(targets: list[str]) -> list[Placement]:
         oc = home / ".config" / "opencode" / "AGENTS.md"
         claude_md = Path(os.environ.get("CLAUDE_CONFIG_DIR") or home / ".claude") / "CLAUDE.md"
         if oc.is_file() or not claude_md.is_file():
-            out.append(Placement("opencode", oc, "block"))
+            out.append(Placement(
+                "opencode", oc, "block",
+                note="" if oc.is_file() else
+                     f"Created {short(oc)} for OpenCode. If you later add {short(claude_md)}, OpenCode "
+                     f"will keep reading only {short(oc)}; add CLAUDE.md to `instructions` in opencode.json."))
         else:
             snip = data_dir() / "instructions" / "opencode.md"
             out.append(Placement(

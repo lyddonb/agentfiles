@@ -168,6 +168,11 @@ def _instructions_plan(plan: Plan, scope: Scope) -> "ins.InstructionsPlan":
             f"mode {r.mode!r} is not a skill these profiles install. Add the plugin or skill that "
             f"provides it, or change `mode:`.")
     inputs = {"mode": r.mode, "instructions": r.instructions, "roles": r.roles}
+    roles_path = (scope.project / ".agents" / "roles.yaml") if scope.is_project else Path.home() / ".agents" / "roles.yaml"
+    shown = "`.agents/roles.yaml` in this project" if scope.is_project else "`~/.agents/roles.yaml`"
+    full_body = ins.render_body(r.profiles, r.mode, r.instructions,
+                                ("`.agents/roles.yaml` in this project, else `~/.agents/roles.yaml`"
+                                 if scope.is_project else shown) if r.roles else None)
     mode, extra, roles = r.mode, r.instructions, r.roles
     if scope.is_project:
         # Tools read user-level and project-level instructions together, so a project gets
@@ -178,16 +183,24 @@ def _instructions_plan(plan: Plan, scope: Scope) -> "ins.InstructionsPlan":
         if roles == (g.get("roles") or {}):
             roles = {}
         extra = [t for t in extra if t not in (g.get("instructions") or [])]
-        if not (mode or extra or roles) and (r.mode or r.instructions or r.roles):
-            return ins.InstructionsPlan(
-                body="", roles_text="", inputs=inputs,
-                skipped_note="Always-on instructions and model roles match your global sync, so the "
-                             "project gets no copies (tools would read both and see them twice).")
-    roles_path = (scope.project / ".agents" / "roles.yaml") if scope.is_project else Path.home() / ".agents" / "roles.yaml"
-    shown = "`.agents/roles.yaml` in this project" if scope.is_project else "`~/.agents/roles.yaml`"
     body = ins.render_body(r.profiles, mode, extra, shown if roles else None)
-    placements = (ins.project_placements(scope.project, r.targets) if scope.is_project
-                  else ins.global_placements(r.targets))
+    if scope.is_project:
+        placements = ins.project_placements(scope.project, r.targets)
+        for pl in placements:
+            if pl.tool == "cursor":
+                # Cursor's global copy is a paste-in snippet that may never have been pasted,
+                # so a project always gets the complete text for Cursor.
+                pl.body = full_body
+        if not body:
+            placements = [pl for pl in placements if pl.body]
+            if r.mode or r.instructions or r.roles:
+                note = ("Always-on instructions match your global sync, so only Cursor gets a project "
+                        "copy (tools would otherwise read them twice). Re-run `sync --project` after "
+                        "changing your global profiles.")
+                return ins.InstructionsPlan(body="", roles_text="", placements=placements,
+                                            inputs=inputs, skipped_note=note)
+    else:
+        placements = ins.global_placements(r.targets)
     return ins.InstructionsPlan(
         body=body,
         roles_text=ins.render_roles(r.profiles, r.roles) if roles else "",
@@ -476,7 +489,8 @@ class Applier:
             write_json(self.scope.state_file, self.new)
 
     # -------------------------------------------------- always-on instructions and roles
-    def _write_owned(self, path: Path, content: str, old_sha: str | None, label: str) -> str | None:
+    def _write_owned(self, path: Path, content: str, old_sha: str | None, label: str,
+                     fix_hint: str = "`instructions:`") -> str | None:
         """Write a file agentfiles owns. Returns its sha, or None if left alone."""
         if path.exists():
             cur = path.read_text()
@@ -488,7 +502,7 @@ class Applier:
                 return None
             if ins.sha(cur) != old_sha:
                 warn(f"{short(path)} was edited by hand; leaving it alone (move your edits into a "
-                     f"profile's `instructions:`, then delete the file and sync)")
+                     f"profile's {fix_hint}, then delete the file and sync)")
                 return None
             self._do(lambda: path.write_text(content))
             ok(f"{label} (updated)")
@@ -511,20 +525,31 @@ class Applier:
         plan = d.instructions or ins.InstructionsPlan(body="", roles_text="")
         old = self.old.get("instructions") or {}
         new: dict[str, dict] = {}
-        wanted = {str(pl.path): pl for pl in plan.placements if pl.path is not None}
+        wanted = {str(pl.path): pl for pl in plan.placements
+                  if pl.path is not None and (pl.body if pl.body is not None else plan.body)}
 
         for path_s, pl in wanted.items():
             path = Path(path_s)
             label = f"instructions for {pl.tool}: {short(path)}"
             prev = old.get(path_s) or {}
+            body = pl.body if pl.body is not None else plan.body
             if pl.kind == "owned":
-                digest = self._write_owned(path, ins.wrap_owned(plan.body, pl.wrap), prev.get("sha"), label)
+                digest = self._write_owned(path, ins.wrap_owned(body, pl.wrap), prev.get("sha"), label,
+                                           fix_hint="`instructions:`")
                 if digest:
                     new[path_s] = {"kind": "owned", "sha": digest}
+                elif prev:
+                    new[path_s] = prev          # left alone: keep ownership so it isn't forgotten
                 continue
             existed = path.exists()
             cur = path.read_text() if existed else ""
-            updated = ins.upsert_block(cur, plan.body)
+            problem = ins.marker_problem(cur)
+            if problem:
+                warn(f"{short(path)} {problem}")
+                if prev:
+                    new[path_s] = prev
+                continue
+            updated = ins.upsert_block(cur, body)
             if updated == cur:
                 same(label)
             else:
@@ -554,6 +579,11 @@ class Applier:
                 self._remove_owned(path, prev.get("sha", ""), label)
             elif path.exists():
                 cur = path.read_text()
+                problem = ins.marker_problem(cur)
+                if problem:
+                    warn(f"{short(path)} {problem}")
+                    new[path_s] = prev
+                    continue
                 if ins.has_block(cur):
                     rest = ins.remove_block(cur)
                     if not rest and prev.get("created"):
@@ -566,16 +596,19 @@ class Applier:
         old_roles = self.old.get("roles") or {}
         roles_state = {}
         if plan.roles_path is not None:
+            same_path = old_roles.get("path") == str(plan.roles_path)
             digest = self._write_owned(plan.roles_path, plan.roles_text,
-                                       old_roles.get("sha") if old_roles.get("path") == str(plan.roles_path) else None,
-                                       f"model roles: {short(plan.roles_path)}")
+                                       old_roles.get("sha") if same_path else None,
+                                       f"model roles: {short(plan.roles_path)}", fix_hint="`roles:`")
             if digest:
                 roles_state = {"path": str(plan.roles_path), "sha": digest}
+            elif same_path:
+                roles_state = dict(old_roles)   # left alone: keep ownership, don't warn twice
         if old_roles.get("path") and old_roles.get("path") != roles_state.get("path"):
             self._remove_owned(Path(old_roles["path"]), old_roles.get("sha", ""),
                                f"model roles: {short(old_roles['path'])}")
         self.new["roles"] = roles_state
-        self.new["instructions_inputs"] = plan.inputs if (new or roles_state) else {}
+        self.new["instructions_inputs"] = plan.inputs if (new or roles_state or plan.inputs.get("mode")) else {}
         if plan.skipped_note:
             d.notes.append(plan.skipped_note)
 

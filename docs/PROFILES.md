@@ -71,7 +71,7 @@ mode: beau-mode                 # a skill these profiles install; sync tells eve
                                 # for non-trivial work. `mode: none` clears an inherited mode.
 instructions:                   # extra always-on text, appended in profile order (deduplicated)
   - Prefer several small PRs to one large one.
-roles:                          # model per subagent role, per tool (written to ~/.agents/roles.yaml)
+roles:                          # model per subagent role, per tool (~/.agents/roles.yaml; projects: .agents/roles.yaml)
   code:      {claude-code: sonnet, cursor: grok-4.7-xhigh-fast}
   judgment:  {claude-code: opus}
   explorer:  {claude-code: sonnet}
@@ -150,7 +150,9 @@ checkout only). Anything your last global sync already installed is skipped, bec
 read both user and project locations and would show duplicates. The same goes for always-on
 text: a project gets only the mode, instructions and roles that differ from your global sync,
 written to personal files (`.claude/rules/agentfiles.md`, `.cursor/rules/agentfiles.mdc`,
-`.agents/roles.yaml`) that agentfiles adds to `.git/info/exclude`. Add `.agentfiles/` to the
+`.agents/roles.yaml`) that agentfiles adds to `.git/info/exclude`. Cursor always gets the complete
+text in a project, because its global copy is a paste-in snippet. The comparison uses your last
+global sync, so re-run `sync --project` in a project after you change your global profiles. Add `.agentfiles/` to the
 project's `.gitignore`. Teammates without agentfiles can use `agentfiles emit-apm`.
 
 ## Per-machine settings (local.yaml)

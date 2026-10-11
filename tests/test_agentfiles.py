@@ -256,7 +256,7 @@ from agentfiles import instructions as ins  # noqa: E402
 from agentfiles.cli import _paths_used  # noqa: E402
 
 
-class ModeAndRolesTests(Fixture):
+class ModedFixture(Fixture):
     def setUp(self):
         super().setUp()
         for k in ("CLAUDE_CONFIG_DIR", "CODEX_HOME", "PI_CODING_AGENT_DIR"):
@@ -273,6 +273,8 @@ class ModeAndRolesTests(Fixture):
               reviewers: {claude-code: [opus, sonnet]}
             """)
 
+
+class ModeAndRolesTests(ModedFixture):
     def test_roles_merge_and_machine_override(self):
         write(self.repo / "local.yaml", "roles:\n  judgment: {claude-code: sonnet, cursor: x-model}\n")
         r = Config(self.repo).resolve(["moded"])
@@ -371,3 +373,43 @@ class ModeAndRolesTests(Fixture):
                 watch: [pkg]
             """)
         self.assertEqual(_paths_used(Config(self.repo), "upstream-only"), ["pkg"])
+
+
+class ReviewRegressionTests(ModedFixture):
+    """Cases found in review: never lose user text, never strand Cursor, never forget ownership."""
+
+    def test_unbalanced_markers_are_left_alone(self):
+        codex_md = self.home / ".codex" / "AGENTS.md"
+        self.run_cli("sync", "moded", "--targets", "codex")
+        broken = codex_md.read_text().replace(ins.END + "\n", "") + "\nMy precious notes.\n"
+        codex_md.write_text(broken)
+        for _ in range(2):
+            code, out = self.run_cli("sync", "moded", "--targets", "codex")
+            self.assertIn("agentfiles markers", out)
+            self.assertEqual(codex_md.read_text(), broken)
+
+    def test_remove_block_keeps_paragraph_spacing(self):
+        text = ins.upsert_block("A\n", "x\n") + "\nB\n"
+        self.assertEqual(ins.remove_block(text), "A\n\nB\n")
+
+    def test_cursor_project_copy_is_always_complete(self):
+        self.run_cli("sync", "moded", "--targets", "cursor,claude-code")
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [moded]\ntargets: [cursor, claude-code]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        self.assertEqual(code, 0, out)
+        mdc = (proj / ".cursor" / "rules" / "agentfiles.mdc").read_text()
+        self.assertIn("load the `alpha` skill", mdc)
+        self.assertIn("Prefer small PRs.", mdc)
+        self.assertFalse((proj / ".claude" / "rules" / "agentfiles.md").exists())
+
+    def test_edited_roles_file_keeps_ownership_and_warns_once(self):
+        self.run_cli("sync", "moded", "--targets", "claude-code")
+        roles = self.home / ".agents" / "roles.yaml"
+        roles.write_text(roles.read_text() + "# mine\n")
+        code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
+        self.assertEqual(out.count("edited by hand"), 1)
+        self.assertIn("`roles:`", out)
+        code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
+        self.assertNotIn("not written by agentfiles", out)
+        self.assertIn("edited by hand", out)

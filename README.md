@@ -22,7 +22,8 @@ agentfiles update                  # review upstream changes, then accept them i
   natively once you add `allow:` for them; until then you get their skills only.
 - **A way of working, not just a pile of skills.** A profile can name a **mode** (a router
   skill such as `beau-mode`), extra always-on **instructions**, and model **roles**. `sync`
-  writes them where each tool reads global instructions and to `~/.agents/roles.yaml`, so
+  writes them where each tool reads global instructions and to `~/.agents/roles.yaml` (a project's
+  `.agents/roles.yaml` when it differs), so
   every agent starts from the same playbooks and principles.
 
 ## Quick start
