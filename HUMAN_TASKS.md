@@ -12,10 +12,11 @@ the listed work. Do them roughly in order.
 | H5 | Review the plugins that run code before trusting them | To do |
 | H6 | Merge the MCP snippets into Codex / Cursor / OpenCode | To do |
 | H7 | Keep employer content in its own repo | Done |
-| H8 | Merge agent-kit's bstack, then re-lock `mine` | 🚧 **BLOCKER** for syncing `builder` and `beau` |
+| H8 | Merge agent-kit's bstack, then re-lock `mine` | Done |
 | H9 | Sync builder and check each tool loads beau-mode | To do |
 | H10 | Confirm the model names in `roles:` | To do |
 | H11 | Review the pending pstack changes | To do |
+| H12 | Merge agent-kit's verification and planning branch, then re-lock `mine` | 🚧 **BLOCKER** for bstack 0.2.0 in your tools |
 
 ---
 
@@ -78,16 +79,7 @@ Remove an `allow:` (or the entry) if you're not comfortable; you'll still get it
 profiles, and project setup live in a separate repo. That repo can depend on these public
 repos and add its own private sources.
 
-### H8. Merge agent-kit's bstack, then re-lock `mine` — 🚧 BLOCKER
-**Why:** `builder` (and so `beau`) now installs `mine:@bstack` and `mine:@principles`, which exist
-only on agent-kit's `feat/bstack` branch. Until agent-kit's `main` has them and the lock points at
-that commit, `agentfiles sync builder` and CI's `lock --frozen` fail with "no marketplace entry".
-**Steps:**
-1. Merge agent-kit's `feat/bstack` PR.
-2. Here: `agentfiles update mine --yes`, then commit `agentfiles.lock` on this branch.
-3. Merge this branch.
-**Meanwhile:** `local.yaml` can point `mine` at `~/code/agent-kit` on the `feat/bstack` branch to try
-it before merging.
+### H8. Merge agent-kit's bstack, then re-lock `mine` — Done
 
 ### H9. Sync builder and check each tool loads beau-mode
 **Steps:**
@@ -109,10 +101,23 @@ defaults from October 2026, not read from your account.
 and should not need changes.
 
 ### H11. Review the pending pstack changes
-**Why:** agentfiles pins pstack at the commit bstack was adapted from (`ccb5507`). Two upstream
-commits have landed since: one distills many skill prompts (including several principles, `reflect`
-and `unslop`) and one adds a `/ketchup` skill.
+**Why:** agentfiles pins pstack at the commit bstack was first adapted from (`ccb5507`). Two upstream
+commits have landed since (head `11713c6`): one distills many skill prompts (including several
+principles, `reflect` and `unslop`) and one adds a `/ketchup` skill. agent-kit's verification and
+planning branch ported its new skills from `11713c6`, so they already include the distillation;
+the older files don't (agent-kit ROADMAP R14). Recommendation: adopt the distillation for the
+principles, `reflect` and `unslop` in one agent-kit PR, and skip `/ketchup` unless you want it.
 **Steps:** `agentfiles update pstack --diff`, then for each change decide adopt, adapt or skip per
 agent-kit `docs/UPSTREAM.md`. Accept the new pstack commit into the lock after the agent-kit PR that
 acts on it lands.
+
+### H12. Merge agent-kit's verification and planning branch, then re-lock `mine` — 🚧 BLOCKER
+**Why:** bstack 0.2.0 (verification skills, why, teach, recall, architect, arena, swarm,
+technical-writing and the Multi-phase plan playbook) is on agent-kit's
+`feat/bstack-verification-and-planning` branch. The lock still pins `mine` at `c481932`.
+**Steps:**
+1. Merge that agent-kit branch.
+2. Here: `agentfiles update mine --yes`, commit `agentfiles.lock`, and merge.
+3. `agentfiles sync beau`. Your `local.yaml` already points `mine` at `~/code/agent-kit`, so with that
+   checkout on the branch you can sync it before merging.
 

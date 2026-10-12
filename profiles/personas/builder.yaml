@@ -7,8 +7,10 @@ extends: [base]
 mode: beau-mode
 
 plugins:
-  # bstack: beau-mode + playbooks, how, interrogate, verify-work, show-me-your-work,
-  # figure-it-out, reflect, correct, unslop, and the beau-agent subagent (Claude Code, Cursor).
+  # bstack: beau-mode + 13 playbooks; how, why, teach, recall; verify-work,
+  # create-/maintain-verification-skill, swarm; architect, arena, technical-writing;
+  # interrogate, show-me-your-work, figure-it-out, reflect, correct, unslop; and the
+  # beau-agent subagent (Claude Code, Cursor).
   - mine:@bstack
   # The 24 named principles beau-mode cites ("prove it works", "subtract before you add", ...).
   - mine:@principles

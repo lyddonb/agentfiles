@@ -27,12 +27,12 @@ when used. Measured with `claude plugin details` in Claude Code:
 | base | 3 | ~400 tokens |
 | knowledge | 4 | ~1,200 tokens |
 | eng-lead | 5 | ~2,000 tokens |
-| builder | 9 | ~6,300 tokens (re-measured with bstack, October 11) |
-| beau | 13 | ~8,500 tokens (re-measured with bstack, October 11) |
+| builder | 9 | ~7,100 tokens (estimated with bstack 0.2.0) |
+| beau | 13 | ~9,300 tokens (estimated with bstack 0.2.0) |
 
 The base, knowledge and eng-lead counts predate gdp-ts, promo, claude-api, podcast-studio and
-fast-jev-compaction; re-measure after syncing. bstack and principles together add about 1,300
-tokens; dropping Superpowers from builder saved about 850. If `beau` feels heavy, sync personas per project instead of everything globally:
+fast-jev-compaction; re-measure after syncing. bstack 0.2.0 and principles together add about 2,100
+tokens (19 skill descriptions plus the instruction block; 0.1.0 was about 1,300); dropping Superpowers from builder saved about 850. If `beau` feels heavy, sync personas per project instead of everything globally:
 `base` globally, `builder` via `.agentfiles.yaml` in code repos.
 
 ### Setup checklist
@@ -63,7 +63,7 @@ Items that need more than `agentfiles sync`. Each declares this in its profile w
 
 | Item | From | Why | Notes |
 |---|---|---|---|
-| **bstack** plugin: `beau-mode` + 12 playbooks, `how`, `interrogate`, `verify-work`, `show-me-your-work`, `figure-it-out`, `reflect`, `correct`, `unslop`, `beau-agent` | agent-kit | The way of working: each non-trivial task gets a playbook, named principles, proof on the real artifact, and a decision trail for unattended runs. Adapted from Lauren Tan's pstack to work in every tool | `mode: beau-mode` makes it always on. About 1,200 always-on tokens in Claude Code. Guide: agent-kit `docs/BSTACK.md` |
+| **bstack** plugin: `beau-mode` + 13 playbooks; `how`, `why`, `teach`, `recall`; `verify-work`, `create-verification-skill`, `maintain-verification-skill`, `swarm`; `architect`, `arena`, `technical-writing`; `interrogate`, `show-me-your-work`, `figure-it-out`, `reflect`, `correct`, `unslop`; `beau-agent` | agent-kit | The way of working: each non-trivial task gets a playbook, named principles, proof on the real artifact, and a decision trail for unattended runs. Each app repo gets its own verification skill. Adapted from Lauren Tan's pstack to work in every tool | `mode: beau-mode` makes it always on. About 2,000 always-on tokens in Claude Code. Guide: agent-kit `docs/BSTACK.md` |
 | **principles** plugin | agent-kit | 24 named rules ("prove it works", "subtract before you add", ...) that beau-mode cites and you can steer with by name | One skill, about 120 always-on tokens |
 | Model roles | this profile | `code`, `judgment`, `explorer` and `reviewers` per tool, written to `~/.agents/roles.yaml` (projects that differ get `.agents/roles.yaml`, which skills read first) | Cursor model ids come from pstack's defaults; confirm yours (HUMAN_TASKS H10) |
 | `pr-review-toolkit` plugin | anthropics/claude-code | Six specialized review agents: general code review, tests, silent failures, type design, comments, simplification | Claude Code only (agents + commands) |
