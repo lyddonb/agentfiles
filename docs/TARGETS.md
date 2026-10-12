@@ -92,8 +92,12 @@ each tool reads global instructions, and never touches anything outside its own 
 Model roles go to `~/.agents/roles.yaml` (project: `.agents/roles.yaml`), which bstack skills read.
 
 Safety rules:
-- Shared files keep everything outside the markers byte for byte; `uninstall` removes only the block,
-  and deletes the file only if agentfiles created it and nothing else is left.
+- Shared files keep everything outside the markers byte for byte (removing the block only tidies the
+  blank lines where it was); `uninstall` removes only the block, and deletes the file only if
+  agentfiles created it and nothing else is left. Markers that are duplicated, unpaired or out of
+  order make agentfiles leave the file alone until you fix them.
+- Paste-in snippets are deleted when no longer needed (and on `uninstall`); `sync` then reminds you
+  to remove them from Cursor or `opencode.json`.
 - Files agentfiles owns are rewritten only if they still match what it last wrote. If you edited one,
   `sync` and `uninstall` leave it alone and say so. Put the change in a profile's `instructions:`.
 - Project files are added to `.git/info/exclude`, so they never show up as changes to commit.

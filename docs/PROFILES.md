@@ -148,8 +148,9 @@ Put a `.agentfiles.yaml` (same keys as a profile) in a repo, then run
 Project installs go to `<project>/.agents/skills` and Claude Code's **local** scope (your
 checkout only). Anything your last global sync already installed is skipped, because tools
 read both user and project locations and would show duplicates. The same goes for always-on
-text: a project gets only the mode, instructions and roles that differ from your global sync,
-written to personal files (`.claude/rules/agentfiles.md`, `.cursor/rules/agentfiles.mdc`,
+text: a project leaves out the mode and instructions your global sync actually wrote for Claude
+Code, and the roles it actually wrote to `~/.agents/roles.yaml` (if it skipped a file, or Claude
+Code wasn't a global target, the project gets the full text), written to personal files (`.claude/rules/agentfiles.md`, `.cursor/rules/agentfiles.mdc`,
 `.agents/roles.yaml`) that agentfiles adds to `.git/info/exclude`. Cursor always gets the complete
 text in a project, because its global copy is a paste-in snippet. The comparison uses your last
 global sync, so re-run `sync --project` in a project after you change your global profiles. Add `.agentfiles/` to the

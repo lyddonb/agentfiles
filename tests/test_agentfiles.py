@@ -413,3 +413,90 @@ class ReviewRegressionTests(ModedFixture):
         code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
         self.assertNotIn("not written by agentfiles", out)
         self.assertIn("edited by hand", out)
+
+
+class SecondReviewTests(ModedFixture):
+    """Second review: stale snippets, dedup against what was really written, marker edge cases."""
+
+    def snippet(self, name: str) -> Path:
+        return self.home / ".local" / "share" / "agentfiles" / "instructions" / name
+
+    def test_snippets_removed_when_mode_cleared_and_on_uninstall(self):
+        write(self.home / ".claude" / "CLAUDE.md", "# global claude notes\n")
+        self.run_cli("sync", "moded", "--targets", "opencode,cursor")
+        oc, cur = self.snippet("opencode.md"), self.snippet("cursor-user-rule.md")
+        self.assertIn("alpha", oc.read_text())
+        self.assertTrue(cur.exists())
+        code, out = self.run_cli("sync", "base", "--targets", "opencode,cursor")
+        self.assertEqual(code, 0, out)
+        self.assertFalse(oc.exists())
+        self.assertFalse(cur.exists())
+        self.assertIn("opencode.json", out)
+
+        self.run_cli("sync", "moded", "--targets", "opencode")
+        self.assertTrue(oc.exists())
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertEqual(code, 0, out)
+        self.assertFalse(oc.exists())
+
+    def test_project_keeps_text_global_sync_did_not_write_for_claude(self):
+        self.run_cli("sync", "moded", "--targets", "codex")      # Claude Code never got it
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [moded]\ntargets: [claude-code]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        self.assertEqual(code, 0, out)
+        text = (proj / ".claude" / "rules" / "agentfiles.md").read_text()
+        self.assertIn("load the `alpha` skill", text)
+        self.assertIn("Prefer small PRs.", text)
+        self.assertIn("~/.agents/roles.yaml", text)              # global roles file was written
+        self.assertFalse((proj / ".agents" / "roles.yaml").exists())
+
+    def test_project_keeps_text_when_global_file_was_left_alone(self):
+        self.run_cli("sync", "base", "--targets", "claude-code")
+        rules = self.home / ".claude" / "rules" / "agentfiles.md"
+        write(rules, "my own rules\n")                          # not ours, so sync skips it
+        roles = self.home / ".agents" / "roles.yaml"
+        write(roles, "mine: true\n")
+        code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
+        self.assertIn("not written by agentfiles", out)
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [moded]\ntargets: [claude-code]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        text = (proj / ".claude" / "rules" / "agentfiles.md").read_text()
+        self.assertIn("load the `alpha` skill", text)
+        self.assertIn("reviewers", (proj / ".agents" / "roles.yaml").read_text())
+
+    def test_markers_regex_cannot_match_are_left_alone(self):
+        body = f"{ins.BEGIN}\r\nold\r\n{ins.END}\r\n"
+        self.assertEqual(ins.marker_problem("# Mine\r\n\r\n" + body), "")   # CRLF is fine
+        self.assertEqual(ins.upsert_block(body, "new\n").count("BEGIN agentfiles"), 1)
+        self.assertEqual(ins.marker_problem(f"{ins.BEGIN}  \nx\n{ins.END}\n"), "")
+        swapped = f"# Mine\n{ins.END}\nx\n{ins.BEGIN}\n"
+        self.assertIn("out of order", ins.marker_problem(swapped))
+        codex_md = self.home / ".codex" / "AGENTS.md"
+        write(codex_md, swapped)
+        code, out = self.run_cli("sync", "moded", "--targets", "codex")
+        self.assertIn("out of order", out)
+        self.assertEqual(codex_md.read_text(), swapped)
+
+    def test_remove_block_leaves_text_outside_it_alone(self):
+        mine = "# Mine\n\n```\na\n\n\n\nb\n```\n"
+        self.assertEqual(ins.remove_block(ins.upsert_block(mine, "x\n")), mine)
+        self.assertEqual(ins.remove_block(ins.upsert_block("", "x\n") + "\n\n\nTail\n\n\n\nEnd\n"),
+                         "Tail\n\n\n\nEnd\n")
+        middle = "A\n\n\n\nA2\n\n" + ins.upsert_block("", "x\n") + "\nB\n"
+        self.assertEqual(ins.remove_block(middle), "A\n\n\n\nA2\n\nB\n")
+
+    def test_refused_removal_keeps_ownership(self):
+        self.run_cli("sync", "moded", "--targets", "claude-code")
+        roles = self.home / ".agents" / "roles.yaml"
+        roles.write_text(roles.read_text() + "# mine\n")
+        code, out = self.run_cli("sync", "base", "--targets", "claude-code")
+        self.assertIn("not removing it", out)
+        self.assertTrue(roles.exists())
+        code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
+        self.assertNotIn("not written by agentfiles", out)        # still known as ours
+        self.assertIn("edited by hand", out)
+        roles.write_text(roles.read_text().replace("# mine\n", ""))   # undo the edit
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertFalse(roles.exists())
