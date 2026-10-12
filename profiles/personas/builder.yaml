@@ -28,3 +28,13 @@ skills:
   - vercel:skills/react-best-practices         # React / Next.js performance rules
   - vercel:skills/composition-patterns         # React component composition
   - vercel:skills/web-design-guidelines        # UI/UX/accessibility review checklist
+  - gdp-ts:skills/gdp-ts                       # authorization checks as compile-time proofs (TypeScript)
+  # promo: narrated explainer videos rendered from a generated JS animation to MP4.
+  - ref: explainers:.agents/skills/promo
+    requires:
+      commands: [node, ffmpeg]
+      env: [OPENROUTER_API_KEY]
+      note: >-
+        Get an OpenRouter key (https://openrouter.ai/keys; about $0.50-1.50 per video) and
+        export OPENROUTER_API_KEY or put it in the project's .env. Or ask the agent to set up
+        local TTS instead. The agent may install more rendering tools per video.

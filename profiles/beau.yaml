@@ -3,3 +3,18 @@ extends: [builder, eng-lead, knowledge]
 
 # Per-machine choice: set `default_profiles: [beau]` in local.yaml on your laptop so
 # a bare `agentfiles sync` installs this. Keep work-only items in a separate private repo.
+
+plugins:
+  # Replaces Claude Code's compaction summary with Jev decisions: stale tool calls/results are
+  # dropped, everything kept stays verbatim. Claude Code only (a function-hook module, no skills).
+  # Sends the session transcript to TypeSafe on each compaction, so keep it off machines
+  # where that isn't OK.
+  # Review: https://github.com/tamaratran/fast-jev-compaction/tree/main/hooks
+  - ref: fast-jev-compaction:@fast-jev-compaction
+    allow: [hooks]
+    requires:
+      env: [CLAUDE_CODE_ENABLE_FUNCTION_HOOKS, TYPESAFE_API_KEY]
+      note: >-
+        Add `export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `export TYPESAFE_API_KEY=...` to
+        your shell profile, then restart Claude Code. (The key can instead go in the plugin's
+        apiKey option via /plugin, but the hooks flag must be an env var.)

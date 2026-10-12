@@ -209,6 +209,42 @@ class SyncTests(Fixture):
         self.assertEqual(code, 2)
         self.assertIn("collision", out)
 
+    def test_requires_reports_manual_setup(self):
+        os.environ.pop("AF_TEST_KEY", None)
+        os.environ.pop("AF_TEST_SET", None)
+        write(self.repo / "profiles" / "needs.yaml", """
+            skills:
+              - ref: up:skills/alpha
+                requires:
+                  commands: [sh, af-no-such-command]
+                  env: [AF_TEST_KEY]
+                  note: Get a key from example.com.
+              - ref: up:skills/beta
+                requires: {commands: [sh], env: [AF_TEST_SET]}
+            """)
+        os.environ["AF_TEST_SET"] = "1"
+        try:
+            code, out = self.run_cli("plan", "needs", "--targets", "codex")
+        finally:
+            os.environ.pop("AF_TEST_SET", None)
+        self.assertEqual(code, 0, out)
+        self.assertIn("Manual setup", out)
+        self.assertIn("!!  up:skills/alpha", out)
+        self.assertIn("not on PATH: af-no-such-command", out)
+        self.assertIn("not set in this shell: AF_TEST_KEY", out)
+        self.assertIn("Get a key from example.com.", out)
+        self.assertIn("ok  up:skills/beta", out)
+
+    def test_requires_rejects_unknown_keys(self):
+        write(self.repo / "profiles" / "bad.yaml", """
+            skills:
+              - ref: up:skills/alpha
+                requires: {packages: [x]}
+            """)
+        code, out = self.run_cli("list", "bad")
+        self.assertEqual(code, 2)
+        self.assertIn("unknown keys ['packages'] in requires", out)
+
 
 if __name__ == "__main__":
     unittest.main()

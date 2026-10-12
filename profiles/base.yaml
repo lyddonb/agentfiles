@@ -10,7 +10,19 @@ plugins:
   # `allow: [mcp]` lets Claude Code install its (remote, read-only) MCP server natively.
   - ref: mine:@research-tools
     allow: [mcp]
+  # make-podcast + podcast-setup: turn notes, articles or PDFs into a multi-host MP3.
+  - ref: podcast-studio:@podcast-studio
+    requires:
+      commands: [python3, ffmpeg]
+      env: [GEMINI_API_KEY]
+      note: >-
+        Install ffmpeg (brew install ffmpeg) and get a free Gemini key at
+        https://aistudio.google.com/apikey. Export GEMINI_API_KEY, or put it in
+        podcast/.env.local after running podcast-setup.
 
 skills:
   # The best way to grow this setup: turn a repeated workflow into a new skill.
   - anthropic-skills:skills/skill-creator
+  # Claude API reference, including the eval guides in shared/evals/ (build-eval, eval-audit,
+  # eval-hillclimb, cost-hillclimb). Those guides are loaded by this skill, not a skill of their own.
+  - anthropic-skills:skills/claude-api

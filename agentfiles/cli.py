@@ -5,6 +5,7 @@ import argparse
 import os
 import shutil
 import sys
+import textwrap
 from pathlib import Path
 
 from . import __version__
@@ -52,6 +53,28 @@ def _resolve(cfg: Config, args, scope: Scope):
     return cfg.resolve(names, extra=extra, targets_override=_targets(args))
 
 
+def _report_setup(items) -> None:
+    """Check each item's `requires:` and say what still has to be done by hand."""
+    items = [it for it in items if it.requires]
+    if not items:
+        return
+    step("Manual setup")
+    for it in items:
+        req = it.requires
+        missing_cmds = [c for c in req["commands"] if not shutil.which(c)]
+        missing_env = [e for e in req["env"] if not os.environ.get(e)]
+        if not missing_cmds and not missing_env:
+            info(f"  ok  {it.ref}")
+            continue
+        info(f"  !!  {it.ref}")
+        if missing_cmds:
+            info(f"        not on PATH: {', '.join(missing_cmds)}")
+        if missing_env:
+            info(f"        not set in this shell: {', '.join(missing_env)}")
+        if req["note"]:
+            info(textwrap.fill(req["note"], width=92, initial_indent=" " * 8, subsequent_indent=" " * 8))
+
+
 # --------------------------------------------------------------------------- commands
 
 def cmd_sync(args) -> int:
@@ -67,6 +90,7 @@ def cmd_sync(args) -> int:
     Applier(scope, dry_run=args.dry_run).apply(desired, resolved.targets)
     if not args.dry_run:
         store.lock.save()
+    _report_setup(resolved.skills + resolved.plugins)
     info("")
     info("Dry run complete; nothing changed." if args.dry_run else
          "Done. Restart running agents to pick up changes.")

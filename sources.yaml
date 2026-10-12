@@ -56,3 +56,24 @@ sources:
   pi-skills:
     git: https://github.com/badlogic/pi-skills
     ref: main
+
+  # Guillermo Rauch's gdp-ts: authorization as compile-time proofs in TypeScript.
+  gdp-ts:
+    git: https://github.com/rauchg/gdp-ts
+    ref: main
+
+  # Tamara Tran's Jev-guided compaction for Claude Code (function-hook module; sends the
+  # transcript to TypeSafe's Jev API).
+  fast-jev-compaction:
+    git: https://github.com/tamaratran/fast-jev-compaction
+    ref: main
+
+  # h14h's explainer-video skill (`promo`): scripted, narrated JS animations rendered to MP4.
+  explainers:
+    git: https://github.com/h14h/explainers
+    ref: master
+
+  # Ben Ogren's podcast-studio: source material -> multi-host episode via Gemini TTS.
+  podcast-studio:
+    git: https://github.com/benogren/podcast-studio
+    ref: main

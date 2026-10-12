@@ -16,6 +16,10 @@
       "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
       "hash": "sha256:83b7d80ded3734b0a135631a4723b87be5605a782fbd118563828b6808910c33"
     },
+    "plugin:fast-jev-compaction:@fast-jev-compaction": {
+      "commit": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
+      "hash": "sha256:489e57941ff062f9c5257c043c6d36f824c91a6678d8e830fcb66692b8ee0f21"
+    },
     "plugin:mine:@eng-leadership": {
       "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
       "hash": "sha256:97b8fcfa78f0d8d2257e9af413193b0eb8161225c646394d272693fbf9531e44"
@@ -32,9 +36,17 @@
       "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
       "hash": "sha256:e04e29eacfbbe3fcc35eed950d2cf145544e731c6cd9206f884753f868dae03f"
     },
+    "plugin:podcast-studio:@podcast-studio": {
+      "commit": "54b252477895fb80708b8e517cde2964c12344f2",
+      "hash": "sha256:417fddf3135dc0ed43e27048e4d69642899fc6166d11abb68a77d31f5eb617bd"
+    },
     "plugin:superpowers:@superpowers": {
       "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
       "hash": "sha256:f52a63b66a086c242645f8b1c5f6b7117a41f2bbcc342065850ca1f06043a53c"
+    },
+    "skill:anthropic-skills:skills/claude-api": {
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "hash": "sha256:56147cc7a8fd4bb4b28df6c8680d1fb430dea846e536c63de3e2a2877120ab01"
     },
     "skill:anthropic-skills:skills/doc-coauthoring": {
       "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
@@ -59,6 +71,14 @@
     "skill:anthropic-skills:skills/webapp-testing": {
       "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
       "hash": "sha256:c0fba2237077ccd422ef5bcd496b7c94ade83a73a93be8a0997612690355881c"
+    },
+    "skill:explainers:.agents/skills/promo": {
+      "commit": "314eb13b8307ed6c07c48bfab08f849f4c2263fd",
+      "hash": "sha256:438369259cfea155f114af69e1dc13d5806cf078d479375188112bc28e7fc2bd"
+    },
+    "skill:gdp-ts:skills/gdp-ts": {
+      "commit": "0b6ebeeec827b05210f3acfa4149a70dda9a0de5",
+      "hash": "sha256:ed779c02323bc590f4e704f3c7729ec12a2d8d0194a51818adf106ef2f2c6f7a"
     },
     "skill:vercel:skills/composition-patterns": {
       "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
@@ -90,6 +110,24 @@
       "locked_at": "2026-10-10T03:43:17Z",
       "ref": "main"
     },
+    "explainers": {
+      "commit": "314eb13b8307ed6c07c48bfab08f849f4c2263fd",
+      "git": "https://github.com/h14h/explainers",
+      "locked_at": "2026-10-10T21:22:36Z",
+      "ref": "master"
+    },
+    "fast-jev-compaction": {
+      "commit": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
+      "git": "https://github.com/tamaratran/fast-jev-compaction",
+      "locked_at": "2026-10-10T21:22:39Z",
+      "ref": "main"
+    },
+    "gdp-ts": {
+      "commit": "0b6ebeeec827b05210f3acfa4149a70dda9a0de5",
+      "git": "https://github.com/rauchg/gdp-ts",
+      "locked_at": "2026-10-10T21:22:35Z",
+      "ref": "main"
+    },
     "mine": {
       "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
       "git": "https://github.com/lyddonb/agent-kit",
@@ -106,6 +144,12 @@
       "commit": "90bb51cae36515a648515b633a81c0c6efc8c74d",
       "git": "https://github.com/badlogic/pi-skills",
       "locked_at": "2026-10-10T03:43:18Z",
+      "ref": "main"
+    },
+    "podcast-studio": {
+      "commit": "54b252477895fb80708b8e517cde2964c12344f2",
+      "git": "https://github.com/benogren/podcast-studio",
+      "locked_at": "2026-10-10T21:22:37Z",
       "ref": "main"
     },
     "superpowers": {
