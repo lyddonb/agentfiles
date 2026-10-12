@@ -20,16 +20,24 @@
       "commit": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
       "hash": "sha256:489e57941ff062f9c5257c043c6d36f824c91a6678d8e830fcb66692b8ee0f21"
     },
+    "plugin:mine:@bstack": {
+      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "hash": "sha256:025ff03b41e70e5504abb04dd99343b0ba5abcb8148602485f04d0cb67d01e5e"
+    },
     "plugin:mine:@eng-leadership": {
-      "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
-      "hash": "sha256:97b8fcfa78f0d8d2257e9af413193b0eb8161225c646394d272693fbf9531e44"
+      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "hash": "sha256:930fdb406a73ce26ab27f7a4315636c551598586f6ce6f4a599e5a680539628a"
     },
     "plugin:mine:@essentials": {
-      "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
-      "hash": "sha256:77bc2020fd77526d81c51e003c032eef904f851a28a117cfb148ac00f9127515"
+      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "hash": "sha256:896b714298fe3bfbc4fa4df24bdce5f65f0b0a1864c941d573acbbdec94701f6"
+    },
+    "plugin:mine:@principles": {
+      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "hash": "sha256:376a1d7d3b3a226a47abdb625535e1f816263263c5661fe0e228613f398aa207"
     },
     "plugin:mine:@research-tools": {
-      "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
+      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
       "hash": "sha256:09102b7d7a40d63c9c537709be8ce3b12ec23dd8038c77037e402980d9d9d2a0"
     },
     "plugin:obsidian:@obsidian": {
@@ -129,9 +137,9 @@
       "ref": "main"
     },
     "mine": {
-      "commit": "2b0b491bf102901eb557ebfa035ead917649828f",
+      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
       "git": "https://github.com/lyddonb/agent-kit",
-      "locked_at": "2026-10-10T04:17:18Z",
+      "locked_at": "2026-10-12T00:38:55Z",
       "ref": "main"
     },
     "obsidian": {
@@ -150,6 +158,12 @@
       "commit": "54b252477895fb80708b8e517cde2964c12344f2",
       "git": "https://github.com/benogren/podcast-studio",
       "locked_at": "2026-10-10T21:22:37Z",
+      "ref": "main"
+    },
+    "pstack": {
+      "commit": "ccb5507cec1546dc88135c1139c811e6c59115ba",
+      "git": "https://github.com/cursor/plugins",
+      "locked_at": "2026-10-11T19:15:15Z",
       "ref": "main"
     },
     "superpowers": {

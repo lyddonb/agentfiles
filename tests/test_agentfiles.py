@@ -248,3 +248,255 @@ class SyncTests(Fixture):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# --------------------------------------------------------------------------- modes, roles, instructions
+
+from agentfiles import instructions as ins  # noqa: E402
+from agentfiles.cli import _paths_used  # noqa: E402
+
+
+class ModedFixture(Fixture):
+    def setUp(self):
+        super().setUp()
+        for k in ("CLAUDE_CONFIG_DIR", "CODEX_HOME", "PI_CODING_AGENT_DIR"):
+            self._env.setdefault(k, os.environ.get(k))
+            os.environ.pop(k, None)
+        write(self.repo / "profiles" / "moded.yaml", """
+            description: with a mode
+            extends: [base]
+            mode: alpha
+            instructions:
+              - Prefer small PRs.
+            roles:
+              judgment: {claude-code: opus}
+              reviewers: {claude-code: [opus, sonnet]}
+            """)
+
+
+class ModeAndRolesTests(ModedFixture):
+    def test_roles_merge_and_machine_override(self):
+        write(self.repo / "local.yaml", "roles:\n  judgment: {claude-code: sonnet, cursor: x-model}\n")
+        r = Config(self.repo).resolve(["moded"])
+        self.assertEqual(r.mode, "alpha")
+        self.assertEqual(r.roles["judgment"], {"claude-code": "sonnet", "cursor": "x-model"})
+        self.assertEqual(r.roles["reviewers"], {"claude-code": ["opus", "sonnet"]})
+        self.assertEqual(r.instructions, ["Prefer small PRs."])
+
+    def test_bad_role_and_tool_rejected(self):
+        write(self.repo / "profiles" / "bad.yaml", "roles: {wizard: {claude-code: opus}}\n")
+        with self.assertRaisesRegex(AgentfilesError, "unknown role"):
+            Config(self.repo).resolve(["bad"])
+        write(self.repo / "profiles" / "bad.yaml", "roles: {code: {vim: opus}}\n")
+        with self.assertRaisesRegex(AgentfilesError, "unknown tool"):
+            Config(self.repo).resolve(["bad"])
+
+    def test_mode_must_be_installed(self):
+        write(self.repo / "profiles" / "ghost.yaml", "extends: [base]\nmode: nope\n")
+        code, out = self.run_cli("sync", "ghost", "--targets", "codex")
+        self.assertEqual(code, 2)
+        self.assertIn("mode 'nope' is not a skill", out)
+
+    def test_mode_can_be_cleared(self):
+        write(self.repo / "profiles" / "plain.yaml", "extends: [moded]\nmode: none\n")
+        self.assertIsNone(Config(self.repo).resolve(["plain"]).mode)
+
+    def test_block_upsert_is_idempotent_and_reversible(self):
+        original = "# Mine\n\nKeep this.\n"
+        once = ins.upsert_block(original, "Body one.\n")
+        self.assertEqual(ins.upsert_block(once, "Body one.\n"), once)
+        twice = ins.upsert_block(once, "Body two.\n")
+        self.assertIn("Body two.", twice)
+        self.assertNotIn("Body one.", twice)
+        self.assertEqual(ins.remove_block(twice), original)
+        self.assertEqual(ins.remove_block(ins.upsert_block("", "x\n")), "")
+
+    def test_sync_writes_instructions_and_roles_then_uninstall_restores(self):
+        codex_md = self.home / ".codex" / "AGENTS.md"
+        write(codex_md, "# My notes\n")
+        code, out = self.run_cli("sync", "moded", "--targets", "codex,claude-code,pi")
+        self.assertEqual(code, 0, out)
+        rules = self.home / ".claude" / "rules" / "agentfiles.md"
+        self.assertIn("load the `alpha` skill", rules.read_text())
+        self.assertIn("Prefer small PRs.", codex_md.read_text())
+        self.assertTrue(codex_md.read_text().startswith("# My notes"))
+        self.assertIn("reviewers", (self.home / ".agents" / "roles.yaml").read_text())
+        self.assertTrue((self.home / ".pi" / "agent" / "AGENTS.md").exists())
+
+        code, out = self.run_cli("sync", "moded", "--targets", "codex,claude-code,pi")
+        self.assertNotIn("+ instructions", out)          # second run changes nothing
+
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(codex_md.read_text(), "# My notes\n")
+        self.assertFalse(rules.exists())
+        self.assertFalse((self.home / ".agents" / "roles.yaml").exists())
+        self.assertFalse((self.home / ".pi" / "agent" / "AGENTS.md").exists())
+
+    def test_hand_edited_owned_file_is_left_alone(self):
+        self.run_cli("sync", "moded", "--targets", "claude-code")
+        rules = self.home / ".claude" / "rules" / "agentfiles.md"
+        rules.write_text(rules.read_text() + "my edit\n")
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertIn("edited by hand", out)
+        self.assertTrue(rules.exists())
+
+    def test_opencode_never_hides_claude_md(self):
+        write(self.home / ".claude" / "CLAUDE.md", "# global claude notes\n")
+        code, out = self.run_cli("sync", "moded", "--targets", "opencode")
+        self.assertEqual(code, 0, out)
+        self.assertFalse((self.home / ".config" / "opencode" / "AGENTS.md").exists())
+        self.assertIn("instructions` list", out)
+
+    def test_project_gets_only_differences(self):
+        self.run_cli("sync", "moded", "--targets", "claude-code")
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [moded]\ntargets: [claude-code]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        self.assertIn("match your global sync", out)
+        self.assertFalse((proj / ".claude" / "rules" / "agentfiles.md").exists())
+
+        write(proj / ".agentfiles.yaml",
+              "extends: [moded]\ntargets: [claude-code]\ninstructions: [Use pnpm here.]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        text = (proj / ".claude" / "rules" / "agentfiles.md").read_text()
+        self.assertIn("Use pnpm here.", text)
+        self.assertNotIn("alpha", text)                  # the mode line is already global
+
+    def test_watch_paths_used_for_unused_sources(self):
+        write(self.repo / "sources.yaml", f"""
+            sources:
+              up:
+                path: {self.up}
+              upstream-only:
+                git: https://example.com/x.git
+                watch: [pkg]
+            """)
+        self.assertEqual(_paths_used(Config(self.repo), "upstream-only"), ["pkg"])
+
+
+class ReviewRegressionTests(ModedFixture):
+    """Cases found in review: never lose user text, never strand Cursor, never forget ownership."""
+
+    def test_unbalanced_markers_are_left_alone(self):
+        codex_md = self.home / ".codex" / "AGENTS.md"
+        self.run_cli("sync", "moded", "--targets", "codex")
+        broken = codex_md.read_text().replace(ins.END + "\n", "") + "\nMy precious notes.\n"
+        codex_md.write_text(broken)
+        for _ in range(2):
+            code, out = self.run_cli("sync", "moded", "--targets", "codex")
+            self.assertIn("agentfiles markers", out)
+            self.assertEqual(codex_md.read_text(), broken)
+
+    def test_remove_block_keeps_paragraph_spacing(self):
+        text = ins.upsert_block("A\n", "x\n") + "\nB\n"
+        self.assertEqual(ins.remove_block(text), "A\n\nB\n")
+
+    def test_cursor_project_copy_is_always_complete(self):
+        self.run_cli("sync", "moded", "--targets", "cursor,claude-code")
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [moded]\ntargets: [cursor, claude-code]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        self.assertEqual(code, 0, out)
+        mdc = (proj / ".cursor" / "rules" / "agentfiles.mdc").read_text()
+        self.assertIn("load the `alpha` skill", mdc)
+        self.assertIn("Prefer small PRs.", mdc)
+        self.assertFalse((proj / ".claude" / "rules" / "agentfiles.md").exists())
+
+    def test_edited_roles_file_keeps_ownership_and_warns_once(self):
+        self.run_cli("sync", "moded", "--targets", "claude-code")
+        roles = self.home / ".agents" / "roles.yaml"
+        roles.write_text(roles.read_text() + "# mine\n")
+        code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
+        self.assertEqual(out.count("edited by hand"), 1)
+        self.assertIn("`roles:`", out)
+        code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
+        self.assertNotIn("not written by agentfiles", out)
+        self.assertIn("edited by hand", out)
+
+
+class SecondReviewTests(ModedFixture):
+    """Second review: stale snippets, dedup against what was really written, marker edge cases."""
+
+    def snippet(self, name: str) -> Path:
+        return self.home / ".local" / "share" / "agentfiles" / "instructions" / name
+
+    def test_snippets_removed_when_mode_cleared_and_on_uninstall(self):
+        write(self.home / ".claude" / "CLAUDE.md", "# global claude notes\n")
+        self.run_cli("sync", "moded", "--targets", "opencode,cursor")
+        oc, cur = self.snippet("opencode.md"), self.snippet("cursor-user-rule.md")
+        self.assertIn("alpha", oc.read_text())
+        self.assertTrue(cur.exists())
+        code, out = self.run_cli("sync", "base", "--targets", "opencode,cursor")
+        self.assertEqual(code, 0, out)
+        self.assertFalse(oc.exists())
+        self.assertFalse(cur.exists())
+        self.assertIn("opencode.json", out)
+
+        self.run_cli("sync", "moded", "--targets", "opencode")
+        self.assertTrue(oc.exists())
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertEqual(code, 0, out)
+        self.assertFalse(oc.exists())
+
+    def test_project_keeps_text_global_sync_did_not_write_for_claude(self):
+        self.run_cli("sync", "moded", "--targets", "codex")      # Claude Code never got it
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [moded]\ntargets: [claude-code]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        self.assertEqual(code, 0, out)
+        text = (proj / ".claude" / "rules" / "agentfiles.md").read_text()
+        self.assertIn("load the `alpha` skill", text)
+        self.assertIn("Prefer small PRs.", text)
+        self.assertIn("~/.agents/roles.yaml", text)              # global roles file was written
+        self.assertFalse((proj / ".agents" / "roles.yaml").exists())
+
+    def test_project_keeps_text_when_global_file_was_left_alone(self):
+        self.run_cli("sync", "base", "--targets", "claude-code")
+        rules = self.home / ".claude" / "rules" / "agentfiles.md"
+        write(rules, "my own rules\n")                          # not ours, so sync skips it
+        roles = self.home / ".agents" / "roles.yaml"
+        write(roles, "mine: true\n")
+        code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
+        self.assertIn("not written by agentfiles", out)
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [moded]\ntargets: [claude-code]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        text = (proj / ".claude" / "rules" / "agentfiles.md").read_text()
+        self.assertIn("load the `alpha` skill", text)
+        self.assertIn("reviewers", (proj / ".agents" / "roles.yaml").read_text())
+
+    def test_markers_regex_cannot_match_are_left_alone(self):
+        body = f"{ins.BEGIN}\r\nold\r\n{ins.END}\r\n"
+        self.assertEqual(ins.marker_problem("# Mine\r\n\r\n" + body), "")   # CRLF is fine
+        self.assertEqual(ins.upsert_block(body, "new\n").count("BEGIN agentfiles"), 1)
+        self.assertEqual(ins.marker_problem(f"{ins.BEGIN}  \nx\n{ins.END}\n"), "")
+        swapped = f"# Mine\n{ins.END}\nx\n{ins.BEGIN}\n"
+        self.assertIn("out of order", ins.marker_problem(swapped))
+        codex_md = self.home / ".codex" / "AGENTS.md"
+        write(codex_md, swapped)
+        code, out = self.run_cli("sync", "moded", "--targets", "codex")
+        self.assertIn("out of order", out)
+        self.assertEqual(codex_md.read_text(), swapped)
+
+    def test_remove_block_leaves_text_outside_it_alone(self):
+        mine = "# Mine\n\n```\na\n\n\n\nb\n```\n"
+        self.assertEqual(ins.remove_block(ins.upsert_block(mine, "x\n")), mine)
+        self.assertEqual(ins.remove_block(ins.upsert_block("", "x\n") + "\n\n\nTail\n\n\n\nEnd\n"),
+                         "Tail\n\n\n\nEnd\n")
+        middle = "A\n\n\n\nA2\n\n" + ins.upsert_block("", "x\n") + "\nB\n"
+        self.assertEqual(ins.remove_block(middle), "A\n\n\n\nA2\n\nB\n")
+
+    def test_refused_removal_keeps_ownership(self):
+        self.run_cli("sync", "moded", "--targets", "claude-code")
+        roles = self.home / ".agents" / "roles.yaml"
+        roles.write_text(roles.read_text() + "# mine\n")
+        code, out = self.run_cli("sync", "base", "--targets", "claude-code")
+        self.assertIn("not removing it", out)
+        self.assertTrue(roles.exists())
+        code, out = self.run_cli("sync", "moded", "--targets", "claude-code")
+        self.assertNotIn("not written by agentfiles", out)        # still known as ours
+        self.assertIn("edited by hand", out)
+        roles.write_text(roles.read_text().replace("# mine\n", ""))   # undo the edit
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertFalse(roles.exists())

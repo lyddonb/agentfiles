@@ -15,6 +15,10 @@
 
 ```yaml
 sources:
+  pstack:
+    git: https://github.com/cursor/plugins
+    ref: main
+    watch: [pstack]                             # paths `update` reviews when no profile uses the source
   anthropic-skills:
     git: https://github.com/anthropics/skills   # any git URL, including private repos you can clone
     ref: main                                   # branch or tag that `agentfiles update` follows
@@ -63,6 +67,16 @@ mcp:                            # MCP servers (Agent Plugins shape)
 
 targets: [claude-code, codex]   # optional: override the tools for this profile (last one wins)
 
+mode: beau-mode                 # a skill these profiles install; sync tells every tool to use it
+                                # for non-trivial work. `mode: none` clears an inherited mode.
+instructions:                   # extra always-on text, appended in profile order (deduplicated)
+  - Prefer several small PRs to one large one.
+roles:                          # model per subagent role, per tool (~/.agents/roles.yaml; projects: .agents/roles.yaml)
+  code:      {claude-code: sonnet, cursor: grok-4.7-xhigh-fast}
+  judgment:  {claude-code: opus}
+  explorer:  {claude-code: sonnet}
+  reviewers: {claude-code: [opus, sonnet]}   # a list = one reviewer per entry
+
 exclude:                        # drop items inherited through `extends`
   skills: [vercel:skills/composition-patterns]
   plugins: [anthropic-claude-code:plugins/feature-dev]
@@ -107,6 +121,23 @@ the note when a tool accepts that.
 - `exclude` removes items contributed by earlier profiles.
 - `targets`: the last profile that sets it wins; `--targets` on the command line beats all.
 - Two different items that install a skill with the same name is an error. Fix it with `exclude`.
+- `mode`: the last profile that sets it wins. `instructions`: appended in order, duplicates dropped.
+- `roles`: merged per role and per tool; later profiles override single entries. `roles:` in
+  `local.yaml` is applied last, because the models you can use depend on the machine.
+
+### Modes and roles
+
+A **mode** is a router skill (such as `beau-mode` from agent-kit's `bstack`) that decides how the
+agent works on every non-trivial task: which playbook, which principles, what counts as done.
+Naming it in a profile makes `sync` write an always-on instruction that points every tool at it.
+`sync` fails if the mode isn't a skill the same profiles install.
+
+**Roles** are the four kinds of subagent bstack skills start: `code` (implementation to a precise
+brief), `judgment` (design, prose, synthesis, the hardest changes), `explorer` (bulk reading) and
+`reviewers` (a panel; give it more than one model family where your tool has them). Skills look
+up the entry for the tool they run in; a missing entry or `inherit` means the current model.
+Model names are whatever that tool accepts: `opus`/`sonnet` in Claude Code, Cursor's model ids in
+Cursor.
 
 ## Project profiles
 
@@ -116,7 +147,13 @@ Put a `.agentfiles.yaml` (same keys as a profile) in a repo, then run
 
 Project installs go to `<project>/.agents/skills` and Claude Code's **local** scope (your
 checkout only). Anything your last global sync already installed is skipped, because tools
-read both user and project locations and would show duplicates. Add `.agentfiles/` to the
+read both user and project locations and would show duplicates. The same goes for always-on
+text: a project leaves out the mode and instructions your global sync actually wrote for Claude
+Code, and the roles it actually wrote to `~/.agents/roles.yaml` (if it skipped a file, or Claude
+Code wasn't a global target, the project gets the full text), written to personal files (`.claude/rules/agentfiles.md`, `.cursor/rules/agentfiles.mdc`,
+`.agents/roles.yaml`) that agentfiles adds to `.git/info/exclude`. Cursor always gets the complete
+text in a project, because its global copy is a paste-in snippet. The comparison uses your last
+global sync, so re-run `sync --project` in a project after you change your global profiles. Add `.agentfiles/` to the
 project's `.gitignore`. Teammates without agentfiles can use `agentfiles emit-apm`.
 
 ## Per-machine settings (local.yaml)
@@ -124,6 +161,8 @@ project's `.gitignore`. Teammates without agentfiles can use `agentfiles emit-ap
 ```yaml
 default_profiles: [beau]                 # what a bare `agentfiles sync` installs here
 targets: [claude-code, codex, pi]        # tools on this machine
+roles:                                   # models this machine can use (wins over profiles)
+  code: {cursor: composer-2}
 source_overrides:
   mine: { path: ~/src/agent-kit }        # develop against a checkout
 ```

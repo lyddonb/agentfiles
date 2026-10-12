@@ -20,6 +20,11 @@ agentfiles update                  # review upstream changes, then accept them i
   files it didn't create.
 - **Safe by default.** Plugins that run code (hooks, MCP servers, `bin/`) are only installed
   natively once you add `allow:` for them; until then you get their skills only.
+- **A way of working, not just a pile of skills.** A profile can name a **mode** (a router
+  skill such as `beau-mode`), extra always-on **instructions**, and model **roles**. `sync`
+  writes them where each tool reads global instructions and to `~/.agents/roles.yaml` (a project's
+  `.agents/roles.yaml` when it differs), so
+  every agent starts from the same playbooks and principles.
 
 ## Quick start
 
@@ -45,11 +50,12 @@ Restart running agents afterwards so they pick up new skills. `sync` ends with a
 | Profile | For | Highlights |
 |---|---|---|
 | `base` | every machine | `commit-message`, `handoff-notes`, `library-docs` + Context7 MCP, `skill-creator`, `claude-api` (with eval guides), podcast-studio |
-| `builder` | shipping code | Superpowers (plan → TDD → debug → review), PR review agents, feature-dev, security guidance, webapp testing, React/Next.js and web design guidelines, gdp-ts |
+| `builder` | shipping code | **beau-mode** (bstack playbooks + principles, always on), model roles, PR review agents, feature-dev, security guidance, webapp testing, React/Next.js and web design guidelines, gdp-ts |
 | `eng-lead` | leading an eng org | design reviews, interview kits, Word/PDF/PowerPoint/Excel skills, doc co-authoring, internal comms, writing guidelines |
 | `knowledge` | Obsidian / research | Obsidian Markdown, Bases, Canvas, CLI, defuddle, YouTube transcripts |
 | `beau` | your laptop | `builder` + `eng-lead` + `knowledge` + fast-jev-compaction (Claude Code) |
 | `example-webapp` | a project | `builder` + Playwright MCP, scoped to one repo |
+| `superpowers` (add-on) | an alternative workflow | obra/superpowers instead of beau-mode; don't combine the two |
 
 All three personas also get `promo` (explainer videos).
 
@@ -92,6 +98,23 @@ agent-kit is just the `mine` source here. To develop agent-kit and agentfiles to
 
 Common flags: `--targets claude-code,codex` (limit tools), `--frozen` (never re-lock; for CI),
 `--offline` (use only cached sources), `--dry-run`.
+
+## Modes, instructions and roles
+
+```yaml
+# profiles/personas/builder.yaml (excerpt)
+mode: beau-mode                   # sync tells every tool to use this skill for non-trivial work
+instructions:                     # optional extra always-on text
+  - Prefer several small PRs to one large one.
+roles:                            # which model each subagent role uses, per tool
+  judgment:  {claude-code: opus,   cursor: claude-opus-5-5-xhigh}
+  reviewers: {claude-code: [opus, sonnet], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
+```
+
+`sync` writes the always-on block to `~/.claude/rules/agentfiles.md` (Claude Code), a marked
+block in `~/.codex/AGENTS.md` and `~/.pi/agent/AGENTS.md`, and paste-in snippets for Cursor and,
+when needed, OpenCode. Projects get only what differs from your global setup. Details:
+[docs/TARGETS.md](docs/TARGETS.md#always-on-instructions).
 
 ## Documentation
 

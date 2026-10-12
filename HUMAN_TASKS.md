@@ -12,6 +12,10 @@ the listed work. Do them roughly in order.
 | H5 | Review the plugins that run code before trusting them | To do |
 | H6 | Merge the MCP snippets into Codex / Cursor / OpenCode | To do |
 | H7 | Keep employer content in its own repo | Done |
+| H8 | Merge agent-kit's bstack, then re-lock `mine` | 🚧 **BLOCKER** for syncing `builder` and `beau` |
+| H9 | Sync builder and check each tool loads beau-mode | To do |
+| H10 | Confirm the model names in `roles:` | To do |
+| H11 | Review the pending pstack changes | To do |
 
 ---
 
@@ -73,3 +77,42 @@ Remove an `allow:` (or the entry) if you're not comfortable; you'll still get it
 **Decision:** No employer name, sources, or profiles in this repo. Company-specific skills,
 profiles, and project setup live in a separate repo. That repo can depend on these public
 repos and add its own private sources.
+
+### H8. Merge agent-kit's bstack, then re-lock `mine` — 🚧 BLOCKER
+**Why:** `builder` (and so `beau`) now installs `mine:@bstack` and `mine:@principles`, which exist
+only on agent-kit's `feat/bstack` branch. Until agent-kit's `main` has them and the lock points at
+that commit, `agentfiles sync builder` and CI's `lock --frozen` fail with "no marketplace entry".
+**Steps:**
+1. Merge agent-kit's `feat/bstack` PR.
+2. Here: `agentfiles update mine --yes`, then commit `agentfiles.lock` on this branch.
+3. Merge this branch.
+**Meanwhile:** `local.yaml` can point `mine` at `~/code/agent-kit` on the `feat/bstack` branch to try
+it before merging.
+
+### H9. Sync builder and check each tool loads beau-mode
+**Steps:**
+1. `agentfiles plan beau`, read it, then `agentfiles sync beau`.
+2. Paste `~/.local/share/agentfiles/instructions/cursor-user-rule.md` into Cursor Settings > Rules >
+   User Rules.
+3. In Claude Code and Cursor, start a session and ask "which instructions about beau-mode did you
+   load, and where from?" Then try `/beau-mode` on a small real task.
+4. If you previously installed Superpowers yourself, uninstall that copy
+   (`claude plugin uninstall superpowers@<marketplace>`); `builder` no longer includes it.
+This is ROADMAP R11.
+
+### H10. Confirm the model names in `roles:`
+**Why:** Model availability depends on your subscriptions. The Cursor ids in
+`profiles/personas/builder.yaml` (`claude-opus-5-5-xhigh`, `grok-4.7-xhigh-fast`) are pstack's
+defaults from October 2026, not read from your account.
+**Steps:** In Cursor, check the model ids you can pick for subagents and fix `roles:` in
+`builder.yaml`, or override per machine in `local.yaml`. Claude Code's `opus` and `sonnet` are aliases
+and should not need changes.
+
+### H11. Review the pending pstack changes
+**Why:** agentfiles pins pstack at the commit bstack was adapted from (`ccb5507`). Two upstream
+commits have landed since: one distills many skill prompts (including several principles, `reflect`
+and `unslop`) and one adds a `/ketchup` skill.
+**Steps:** `agentfiles update pstack --diff`, then for each change decide adopt, adapt or skip per
+agent-kit `docs/UPSTREAM.md`. Accept the new pstack commit into the lock after the agent-kit PR that
+acts on it lands.
+
