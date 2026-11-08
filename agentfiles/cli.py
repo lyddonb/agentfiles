@@ -14,7 +14,8 @@ from .config import KNOWN_TARGETS, Config, Profile, parse_profile
 from .resolve import build_plan, verify_and_lock
 from .store import Store
 from .targets import Applier, Desired, Scope, desired_state
-from .util import AgentfilesError, confirm, info, read_json, read_yaml, repo_root, short, step, warn
+from .util import (AgentfilesError, confirm, info, read_json, read_yaml, repo_root, short, state_dir,
+                   step, warn)
 
 PROJECT_FILE = ".agentfiles.yaml"
 
@@ -247,9 +248,26 @@ def cmd_doctor(args) -> int:
         for name, prof in cfg.profiles.items():
             cfg.resolve([name])
         info(f"  ok  {len(cfg.profiles)} profiles and {len(cfg.sources)} sources parse cleanly")
+        for src in cfg.sources.values():
+            if src.path is not None and not src.path.is_dir():
+                warn(f"source '{src.name}' points at {src.path}, which does not exist. "
+                     f"Fix its path in sources.yaml or source_overrides in local.yaml.")
+                problems += 1
     except AgentfilesError as e:
         warn(str(e))
         problems += 1
+    # A moved checkout leaves symlinks that still look installed; only resolving them shows it.
+    state = read_json(state_dir() / "state.json", default={}) or {}
+    links = list(state.get("links") or {})
+    links += list(((state.get("claude") or {}).get("generated_links") or {}).values())
+    broken = sorted(str(p) for p in links if not Path(p).exists())
+    if broken:
+        warn(f"{len(broken)} installed skill link(s) no longer resolve (a source checkout moved or "
+             f"was deleted). Fix the source path, then run `agentfiles sync`:\n    "
+             + "\n    ".join(broken))
+        problems += 1
+    elif links:
+        info(f"  ok  {len(links)} installed skill links resolve")
     return 1 if problems else 0
 
 
