@@ -7,8 +7,10 @@ Channels:
   claude-code  Claude Code does not read ~/.agents/skills, and linking skills into
                ~/.claude/skills would duplicate them in Cursor/OpenCode (which read both).
                So agentfiles generates ONE local marketplace ("agentfiles-local") holding:
-                 - plugin "agentfiles": standalone profile skills (symlinks)
-                 - every plugin installed natively, as a symlink to its pinned tree
+                 - plugin "agentfiles": standalone profile skills (copies)
+                 - every plugin installed natively, as a copy of its pinned tree
+               Copies, not symlinks: Claude Code rejects plugin files that resolve outside
+               the plugin or marketplace directory ("Path escapes plugin directory").
                Using our own marketplace keeps installs pinned to agentfiles.lock, avoids
                marketplace-name clashes, and works for upstream marketplaces whose names
                Claude Code reserves (anthropics/*).
@@ -410,6 +412,22 @@ class Applier:
                 removed(f"{label}: {dp.name}")
         return kept
 
+    def _sync_copies(self, desired: dict[str, str], old: dict[str, str], label: str) -> None:
+        """Like _sync_links, but copies. Claude Code refuses plugin files that resolve outside
+        the plugin or marketplace directory, so a symlink into the cache never loads there.
+        Content is re-copied on every sync, so edits in a local `path:` source show up too."""
+        for dest, src in desired.items():
+            dp = Path(dest)
+            if old.get(dest) == src and dp.is_dir() and not dp.is_symlink():
+                same(f"{label}: {dp.name}")
+            else:
+                ok(f"{label}: {dp.name}" + (" (updated)" if dest in old else ""))
+            self._do(lambda dp=dp, src=src: _copy_dir(Path(src), dp))
+        for dest in old:
+            if dest not in desired:
+                self._do(lambda dp=Path(dest): _remove_entry(dp))
+                removed(f"{label}: {Path(dest).name}")
+
     # -------------------------------------------------- generated Claude marketplace
     def _write_marketplace(self, d: Desired) -> tuple[Path, list[str], str]:
         """Write agentfiles-local. Returns (root, plugin names, content digest)."""
@@ -430,11 +448,11 @@ class Applier:
                 "description": "Skills from your agentfiles profiles (generated)"}))
         old_links = {str(gen / "skills" / n): s
                      for n, s in ((self.old.get("claude") or {}).get("generated_links") or {}).items()}
-        self._sync_links({str(gen / "skills" / n): s for n, s in d.claude_links.items()}, old_links,
-                         "claude skill")
+        self._sync_copies({str(gen / "skills" / n): s for n, s in d.claude_links.items()}, old_links,
+                          "claude skill")
         self.new["claude"]["generated_links"] = d.claude_links
 
-        # (b) native plugins: symlink to the pinned plugin root, or a synthesized plugin
+        # (b) native plugins: a copy of the pinned plugin root, or a synthesized plugin
         #     holding only the listed skills (marketplace entries with an explicit skills list)
         old_native = (self.old.get("claude") or {}).get("native") or {}
         for name in sorted(set(old_native) - set(d.claude_native)):
@@ -446,23 +464,19 @@ class Applier:
             if spec["skills"] is None:
                 entry.update(spec["entry"])
                 fingerprint = spec["root"]
-                if old_native.get(name) != fingerprint or not target.is_symlink():
-                    self._do(lambda t=target, r=spec["root"]: (_remove_entry(t), t.parent.mkdir(parents=True, exist_ok=True),
-                                                               t.symlink_to(r)))
+                self._do(lambda t=target, r=spec["root"]: _copy_dir(Path(r), t))
             else:
                 entry.update({k: v for k, v in spec["entry"].items() if k in SYNTH_KEYS})
                 fingerprint = json.dumps(spec["skills"])
-                if old_native.get(name) != fingerprint or not target.is_dir():
-                    def build(t=target, spec=spec, name=name):
-                        _remove_entry(t)
-                        write_json(t / ".claude-plugin" / "plugin.json", {
-                            "name": name, "description": spec["entry"].get("description", name),
-                            "version": spec["entry"].get("version", "0.0.0"),
-                            "author": spec["entry"].get("author") or {"name": "agentfiles"}})
-                        for sk in spec["skills"]:
-                            (t / "skills").mkdir(parents=True, exist_ok=True)
-                            (t / "skills" / Path(sk).name).symlink_to(sk)
-                    self._do(build)
+                def build(t=target, spec=spec, name=name):
+                    _remove_entry(t)
+                    write_json(t / ".claude-plugin" / "plugin.json", {
+                        "name": name, "description": spec["entry"].get("description", name),
+                        "version": spec["entry"].get("version", "0.0.0"),
+                        "author": spec["entry"].get("author") or {"name": "agentfiles"}})
+                    for sk in spec["skills"]:
+                        _copy_dir(Path(sk), t / "skills" / Path(sk).name)
+                self._do(build)
             entries.append(entry)
             self.new["claude"]["native"][name] = fingerprint
 
@@ -738,6 +752,13 @@ class Applier:
         for name in sorted(set(old_mcp) - set(d.claude_mcp)):
             if self._claude(["mcp", "remove", name, *mscope]):
                 removed(f"mcp {name}")
+
+
+def _copy_dir(src: Path, dest: Path) -> None:
+    _remove_entry(dest)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(src, dest, symlinks=False, ignore_dangling_symlinks=True,
+                    ignore=shutil.ignore_patterns(".git", ".agentfiles-complete"))
 
 
 def _remove_entry(p: Path) -> None:
