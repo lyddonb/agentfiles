@@ -200,6 +200,45 @@ class SyncTests(Fixture):
         self.assertIn("not managed by agentfiles", out)
         self.assertFalse((shared / "alpha").is_symlink())
 
+    def test_item_targets_keep_a_plugin_out_of_claude_code(self):
+        write(self.repo / "profiles" / "split.yaml", """
+            description: split
+            skills:
+              - ref: up:skills/alpha
+                targets: [codex]
+            plugins:
+              - ref: up:@kit
+                targets: [codex, pi]
+            """)
+        code, out = self.run_cli("plan", "split", "--targets", "claude-code,codex")
+        self.assertEqual(code, 0, out)
+        self.assertIn("skill: alpha", out)
+        self.assertIn("skill: gamma", out, "codex still gets the plugin's skills")
+        self.assertNotIn("plugin kit@", out, "kit targets codex and pi only, so Claude Code must not install it")
+        self.assertNotIn("claude skill: alpha", out)
+
+    def test_source_targets_from_local_yaml_apply_to_every_item(self):
+        write(self.repo / "local.yaml", f"""
+            source_overrides:
+              up: {{path: {self.up}, targets: [codex, cursor, opencode, pi]}}
+            """)
+        code, out = self.run_cli("plan", "base", "--targets", "claude-code,codex")
+        self.assertEqual(code, 0, out)
+        self.assertIn("skill: gamma", out)
+        self.assertNotIn("plugin kit@", out)
+        self.assertNotIn("claude skill:", out)
+
+    def test_unknown_item_target_is_rejected(self):
+        write(self.repo / "profiles" / "bad.yaml", """
+            description: bad
+            skills:
+              - ref: up:skills/alpha
+                targets: [vscode]
+            """)
+        code, out = self.run_cli("plan", "bad")
+        self.assertNotEqual(code, 0)
+        self.assertIn("unknown targets ['vscode']", out)
+
     def test_claude_dry_run_plan(self):
         code, out = self.run_cli("plan", "more", "--targets", "claude-code")
         self.assertEqual(code, 0, out)
