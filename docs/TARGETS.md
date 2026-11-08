@@ -28,10 +28,14 @@ Claude Code doesn't read `~/.agents/skills`. Instead agentfiles maintains one lo
 marketplace at `~/.local/share/agentfiles/claude-marketplace` (projects get their own, named
 `agentfiles-<project>-<hash>`):
 
-- plugin **`agentfiles`** — every standalone skill from your profiles, as symlinks
+- plugin **`agentfiles`** — a copy of every standalone skill from your profiles
   (invoked as `/agentfiles:<skill>`), plus skills of plugins that can't install natively;
-- one plugin per **native** plugin — a symlink to the plugin's pinned tree, so its hooks,
+- one plugin per **native** plugin — a copy of the plugin's pinned tree, so its hooks,
   agents, commands and MCP servers work exactly as the author intended.
+
+These are copies, not symlinks, because Claude Code refuses any plugin file that resolves
+outside the plugin or marketplace directory ("Path escapes plugin directory"). `sync`
+re-copies them each run, so edits in a local `path:` source appear after the next sync.
 
 Why our own marketplace instead of adding upstream marketplaces directly:
 

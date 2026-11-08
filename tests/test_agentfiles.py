@@ -239,6 +239,40 @@ class SyncTests(Fixture):
         self.assertNotEqual(code, 0)
         self.assertIn("unknown targets ['vscode']", out)
 
+    def stub_claude(self):
+        bin_dir = self.tmp / "bin"
+        bin_dir.mkdir(exist_ok=True)
+        stub = bin_dir / "claude"
+        stub.write_text('#!/bin/sh\ncase "$*" in *--json*) echo "[]";; esac\nexit 0\n')
+        stub.chmod(0o755)
+        os.environ["PATH"] = f"{bin_dir}:/usr/bin:/bin"
+
+    def test_claude_marketplace_holds_copies_not_symlinks(self):
+        self.stub_claude()
+        market = self.home / ".local" / "share" / "agentfiles" / "claude-marketplace"
+        code, out = self.run_cli("sync", "base", "--targets", "claude-code")
+        self.assertEqual(code, 0, out)
+        self.assertTrue((market / "plugins" / "kit" / "skills" / "gamma" / "SKILL.md").is_file(),
+                        "native plugins are copied whole")
+        code, out = self.run_cli("sync", "more", "--targets", "claude-code")
+        self.assertEqual(code, 0, out)
+        links = [str(p) for p in market.rglob("*") if p.is_symlink()]
+        self.assertEqual(links, [], "Claude Code rejects plugin files that resolve outside the marketplace")
+        alpha = market / "plugins" / "agentfiles" / "skills" / "alpha" / "SKILL.md"
+        beta = market / "plugins" / "agentfiles" / "skills" / "beta"
+        self.assertTrue(alpha.is_file() and beta.is_dir(), "standalone skills are copied into the generated plugin")
+        self.assertFalse((market / "plugins" / "kit").exists(), "a plugin dropped from the profile is removed")
+
+        (self.up / "skills" / "alpha" / "SKILL.md").write_text(
+            "---\nname: alpha\ndescription: Changed in place. Use when testing.\n---\n")
+        code, out = self.run_cli("sync", "more", "--targets", "claude-code")
+        self.assertEqual(code, 0, out)
+        self.assertIn("Changed in place", alpha.read_text(), "a path source edit reaches the copy on the next sync")
+
+        code, out = self.run_cli("sync", "base", "--targets", "claude-code")
+        self.assertEqual(code, 0, out)
+        self.assertFalse(beta.exists(), "a skill dropped from the profile is removed from the copy")
+
     def test_claude_dry_run_plan(self):
         code, out = self.run_cli("plan", "more", "--targets", "claude-code")
         self.assertEqual(code, 0, out)
