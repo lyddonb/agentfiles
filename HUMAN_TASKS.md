@@ -118,6 +118,6 @@ technical-writing and the Multi-phase plan playbook) is on agent-kit's
 **Steps:**
 1. Merge that agent-kit branch.
 2. Here: `agentfiles update mine --yes`, commit `agentfiles.lock`, and merge.
-3. `agentfiles sync beau`. Your `local.yaml` already points `mine` at `~/code/agent-kit`, so with that
+3. `agentfiles sync beau`. Your `local.yaml` already points `mine` at `~/code/agent-runtime/agent-kit`, so with that
    checkout on the branch you can sync it before merging.
 
