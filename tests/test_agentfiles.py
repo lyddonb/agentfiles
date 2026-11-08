@@ -179,6 +179,19 @@ class SyncTests(Fixture):
         self.assertEqual(code, 0, out)
         self.assertEqual(sorted(p.name for p in shared.iterdir()), ["alpha", "gamma"])
 
+    def test_doctor_flags_a_moved_source(self):
+        code, out = self.run_cli("sync", "base", "--targets", "codex")
+        self.assertEqual(code, 0, out)
+        code, out = self.run_cli("doctor")
+        self.assertIn("installed skill links resolve", out, "a fresh sync should pass the link check")
+
+        self.up.rename(self.tmp / "moved")
+        code, out = self.run_cli("doctor")
+        self.assertEqual(code, 1, out)
+        self.assertIn("source 'up' points at", out)
+        self.assertIn("no longer resolve", out)
+        self.assertIn(str(self.home / ".agents" / "skills" / "alpha"), out)
+
     def test_never_clobbers_unmanaged(self):
         shared = self.home / ".agents" / "skills"
         (shared / "alpha").mkdir(parents=True)
