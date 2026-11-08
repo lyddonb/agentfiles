@@ -49,6 +49,7 @@ plugins:                        # plugins: native in Claude Code, skills everywh
     allow: [hooks]                       # permit code-running components (see SECURITY.md)
     explode: true                        # also share its skills via ~/.agents/skills (default true)
     native: true                         # install natively in Claude Code when possible (default true)
+    targets: [codex, cursor]             # only these tools (default: the profile's targets)
   - ref: podcast-studio:@podcast-studio
     requires:                            # setup agentfiles can't do for you; checked on sync/plan
       commands: [python3, ffmpeg]        # must be on PATH
@@ -165,4 +166,15 @@ roles:                                   # models this machine can use (wins ove
   code: {cursor: composer-2}
 source_overrides:
   mine: { path: ~/src/agent-kit }        # develop against a checkout
+```
+
+A source can also carry `targets:` (in `sources.yaml` or, per machine, in `source_overrides`).
+Its items then install only into those tools, unless an item sets its own `targets:`. Use it
+when a tool already gets that source another way. For example, if your claude.ai account syncs
+agent-kit's marketplace from GitHub, Claude Code (and the desktop app) already have those
+plugins, so keep agentfiles' copies to the other tools:
+
+```yaml
+source_overrides:
+  mine: { path: ~/src/agent-kit, targets: [codex, cursor, opencode, pi] }
 ```

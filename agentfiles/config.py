@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from .util import NAME_RE, AgentfilesError, read_yaml
@@ -23,6 +23,7 @@ class Source:
     path: Path | None = None   # local directory source (development); never locked
     note: str = ""
     watch: tuple[str, ...] = ()  # paths `update` reviews when no profile uses this source
+    targets: tuple[str, ...] | None = None  # tools this source's items install into (None: all)
 
     @property
     def is_local(self) -> bool:
@@ -41,6 +42,7 @@ class Item:
     native: bool = True            # install natively in Claude Code when possible
     origin: str = ""               # profile that declared it
     requires: dict = field(default_factory=dict)  # {commands, env, note}: manual setup, checked on sync
+    targets: tuple[str, ...] | None = None  # tools this item installs into (None: the profile's targets)
 
     @property
     def key(self) -> str:
@@ -97,7 +99,7 @@ def parse_item(raw, kind: str, origin: str) -> Item:
         raw = {"ref": raw}
     if not isinstance(raw, dict) or "ref" not in raw:
         raise AgentfilesError(f"profile {origin}: each {kind} must be a string or a mapping with 'ref'")
-    unknown = set(raw) - {"ref", "allow", "explode", "native", "note", "requires"}
+    unknown = set(raw) - {"ref", "allow", "explode", "native", "note", "requires", "targets"}
     if unknown:
         raise AgentfilesError(f"profile {origin}: unknown keys {sorted(unknown)} on {raw['ref']}")
     source, path, entry = parse_ref(str(raw["ref"]), kind)
@@ -108,7 +110,19 @@ def parse_item(raw, kind: str, origin: str) -> Item:
     return Item(kind=kind, ref=f"{source}:{('@' + entry) if entry else path}", source=source,
                 path=path, entry=entry, allow=allow, explode=bool(raw.get("explode", True)),
                 native=bool(raw.get("native", True)), origin=origin,
-                requires=parse_requires(raw.get("requires"), f"profile {origin}: {raw['ref']}"))
+                requires=parse_requires(raw.get("requires"), f"profile {origin}: {raw['ref']}"),
+                targets=parse_targets(raw.get("targets"), f"profile {origin}: {raw['ref']}"))
+
+
+def parse_targets(raw, where: str) -> tuple[str, ...] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, list) or not all(isinstance(t, str) for t in raw):
+        raise AgentfilesError(f"{where}: targets must be a list of tool names")
+    bad = set(raw) - set(KNOWN_TARGETS)
+    if bad:
+        raise AgentfilesError(f"{where}: unknown targets {sorted(bad)}; known: {KNOWN_TARGETS}")
+    return tuple(raw)
 
 
 def parse_requires(raw, where: str) -> dict:
@@ -235,17 +249,19 @@ class Config:
         out = {}
         for name, cfg in data.items():
             cfg = {**cfg, **(overrides.get(name) or {})}
+            targets = parse_targets(cfg.get("targets"), f"source {name}")
             if "path" in cfg:
                 p = Path(os.path.expanduser(cfg["path"]))
                 if not p.is_absolute():
                     p = (self.root / p).resolve()
-                out[name] = Source(name=name, path=p, note=cfg.get("note", ""))
+                out[name] = Source(name=name, path=p, note=cfg.get("note", ""), targets=targets)
             elif "git" in cfg:
                 watch = cfg.get("watch") or []
                 if not isinstance(watch, list) or not all(isinstance(w, str) for w in watch):
                     raise AgentfilesError(f"source {name}: watch must be a list of paths")
                 out[name] = Source(name=name, git=cfg["git"], ref=str(cfg.get("ref", "main")),
-                                   note=cfg.get("note", ""), watch=tuple(w.strip("/") for w in watch))
+                                   note=cfg.get("note", ""), watch=tuple(w.strip("/") for w in watch),
+                                   targets=targets)
             else:
                 raise AgentfilesError(f"source {name}: needs 'git' or 'path'")
         return out
@@ -324,6 +340,12 @@ class Config:
         # Per-machine role overrides (local.yaml / agentfiles.yaml) win over profiles,
         # because which models you can use depends on the machine's subscriptions.
         roles = merge_roles(roles, parse_roles(self.settings.get("roles"), "settings"))
-        return Resolved(profiles=[p.name for p in order], skills=list(skills.values()),
-                        plugins=list(plugins.values()), mcp=mcp, targets=targets,
+
+        def with_source_targets(it: Item) -> Item:
+            src = self.sources[it.source].targets
+            return replace(it, targets=src) if it.targets is None and src is not None else it
+
+        return Resolved(profiles=[p.name for p in order],
+                        skills=[with_source_targets(i) for i in skills.values()],
+                        plugins=[with_source_targets(i) for i in plugins.values()], mcp=mcp, targets=targets,
                         mode=mode, instructions=instructions, roles=roles)

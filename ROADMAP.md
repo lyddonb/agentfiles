@@ -65,10 +65,9 @@ first; few high-value skills need it (pi-skills' youtube-transcript and browser-
 **Why deferred:** Trees are small (a few MB each); disk use only grows with updates.
 **Prioritize when:** `~/.cache/agentfiles` passes ~1 GB.
 
-### R6. Per-item target filters
-**What:** `targets: [claude-code]` on a single skill or plugin entry.
-**Why deferred:** Profile-level `targets` plus `explode`/`native` cover the cases seen so far.
-**Prioritize when:** a skill misbehaves in one tool but is wanted in others.
+### R6. Per-item target filters — Done
+`targets:` on an item or a source (including a per-machine `source_overrides` entry). See
+[docs/PROFILES.md](docs/PROFILES.md#per-machine-settings-localyaml).
 
 ### R7. Windows support
 **What:** Use directory junctions or copies where symlinks need Developer Mode; test paths.

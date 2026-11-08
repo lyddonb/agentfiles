@@ -98,25 +98,36 @@ def _add_unique(bucket: dict[str, Skill], skill: Skill, channel: str) -> None:
     bucket[skill.name] = skill
 
 
+def _goes_to(item, tools: set[str]) -> bool:
+    """Whether an item installs into any of these tools (its own `targets:` or its source's)."""
+    return item.targets is None or bool(set(item.targets) & tools)
+
+
 def desired_state(plan: Plan, scope: Scope) -> Desired:
     d = Desired()
     targets = set(plan.resolved.targets)
+    shared_tools = targets & SHARED_DIR_TARGETS
 
-    if targets & SHARED_DIR_TARGETS:
+    if shared_tools:
         shared: dict[str, Skill] = {}
         for s in plan.skills:
-            _add_unique(shared, s, short(scope.shared_skills_dir))
+            if _goes_to(s.item, shared_tools):
+                _add_unique(shared, s, short(scope.shared_skills_dir))
         for p in plan.plugins:
-            if p.item.explode:
+            if p.item.explode and _goes_to(p.item, shared_tools):
                 for s in p.skills:
                     _add_unique(shared, s, short(scope.shared_skills_dir))
         d.shared_links = {str(scope.shared_skills_dir / n): str(s.path) for n, s in sorted(shared.items())}
 
     if "claude-code" in targets:
         gen: dict[str, Skill] = {}
+        claude = {"claude-code"}
         for s in plan.skills:
-            _add_unique(gen, s, "Claude Code (agentfiles plugin)")
+            if _goes_to(s.item, claude):
+                _add_unique(gen, s, "Claude Code (agentfiles plugin)")
         for p in plan.plugins:
+            if not _goes_to(p.item, claude):
+                continue
             if p.claude is not None and p.item.native and not p.blocked:
                 if p.name == GEN_PLUGIN or p.name in d.claude_native:
                     other = d.claude_native.get(p.name, {}).get("ref", "agentfiles itself")
@@ -141,7 +152,7 @@ def desired_state(plan: Plan, scope: Scope) -> Desired:
     others = targets - {"claude-code"}
     for p in plan.plugins:
         extra = p.components - {"mcp"}
-        if extra and others:
+        if extra and others and _goes_to(p.item, others):
             d.notes.append(f"{p.item.ref}: its {', '.join(sorted(extra))} only work in Claude Code; "
                            f"other tools get its skills" + ("" if p.skills else " (it has none)"))
     if targets & {"codex", "cursor", "opencode"}:
@@ -149,7 +160,8 @@ def desired_state(plan: Plan, scope: Scope) -> Desired:
         # through the shared directory, so they need the plugin's MCP servers separately).
         snippets = {}
         for p in plan.plugins:
-            snippets.update(p.mcp)
+            if _goes_to(p.item, targets & {"codex", "cursor", "opencode"}):
+                snippets.update(p.mcp)
         snippets.update(plan.resolved.mcp)
         d.snippet_mcp = snippets
     d.instructions = _instructions_plan(plan, scope)
