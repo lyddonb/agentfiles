@@ -43,6 +43,7 @@ _GATE = re.compile(r"[a-z][a-z0-9-]*")
 _DURATION = re.compile(r"([0-9]+)([mhd])")
 _HOST = re.compile(r"[A-Za-z0-9.-]+")
 _IDENTITY = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*@[a-z]+")
+_UNREADABLE = re.compile("[\x00-\x1f\x7f-\x9f\u2028\u2029\ufeff]")
 
 
 def _minutes(value) -> int | None:
@@ -67,12 +68,14 @@ def parse_policy(raw, where: str) -> dict:
     if not isinstance(raw, dict):
         raise AgentfilesError(f"{where}: policy must be a mapping")
     _keys(where, raw, ("version", "gates", "budgets", "security", "audit", "identity", "approvers"))
-    if "version" in raw and raw["version"] != 1:
+    if "version" in raw and (type(raw["version"]) is not int or raw["version"] != 1):
         raise AgentfilesError(f"{where}: policy version must be 1")
     if "gates" in raw:
         gates = raw["gates"]
         if not isinstance(gates, list) or not all(isinstance(g, str) and _GATE.fullmatch(g) for g in gates):
             raise AgentfilesError(f"{where}: policy.gates must be a list of gate ids like new-dependency")
+    if not isinstance(raw.get("budgets") or {}, dict):
+        raise AgentfilesError(f"{where}: policy.budgets must map tier2 or tier3 to a budget")
     for tier, b in (raw.get("budgets") or {}).items():
         if tier not in TIERS:
             raise AgentfilesError(f"{where}: policy.budgets.{tier}: unknown tier; known: {', '.join(TIERS)}")
@@ -94,20 +97,26 @@ def parse_policy(raw, where: str) -> dict:
     if "network_allow" in sec and (not isinstance(sec["network_allow"], list)
                                    or not all(isinstance(h, str) and _HOST.fullmatch(h) for h in sec["network_allow"])):
         raise AgentfilesError(f"{where}: policy.security.network_allow must list host names")
+    if "redact_patterns" in sec and not isinstance(sec["redact_patterns"], list):
+        raise AgentfilesError(f"{where}: policy.security.redact_patterns must be a list")
     for i, pat in enumerate(sec.get("redact_patterns") or []):
-        if not isinstance(pat, str) or not pat or "\n" in pat:
-            raise AgentfilesError(f"{where}: policy.security.redact_patterns[{i}] must be a one-line regex")
+        # agent-ledger reads these with a strict reader (no YAML library): a pattern it can't
+        # read back exactly would stop every ledger write, so refuse it here instead.
+        if not isinstance(pat, str) or not pat or _UNREADABLE.search(pat) or " #" in pat \
+                or "redact_patterns" in pat:
+            raise AgentfilesError(f"{where}: policy.security.redact_patterns[{i}] must be a one-line regex "
+                                  f"without control characters, ' #' or the text redact_patterns "
+                                  f"(agent-ledger can't read those back)")
         try:
             re.compile(pat)
         except re.error as e:
             raise AgentfilesError(f"{where}: policy.security.redact_patterns[{i}] is not a valid regex: {e}") from None
-    if "redact_patterns" in sec and not isinstance(sec["redact_patterns"], list):
-        raise AgentfilesError(f"{where}: policy.security.redact_patterns must be a list")
     audit = raw.get("audit") or {}
     if not isinstance(audit, dict):
         raise AgentfilesError(f"{where}: policy.audit must be a mapping")
     _keys(f"{where}: policy.audit", audit, ("sinks", "sessions"))
-    if "sinks" in audit and (not isinstance(audit["sinks"], list) or not set(audit["sinks"]) <= set(KNOWN_SINKS)):
+    if "sinks" in audit and (not isinstance(audit["sinks"], list)
+                             or not all(isinstance(x, str) and x in KNOWN_SINKS for x in audit["sinks"])):
         raise AgentfilesError(f"{where}: policy.audit.sinks may only list {', '.join(KNOWN_SINKS)} in M0")
     sessions = audit.get("sessions") or {}
     if not isinstance(sessions, dict):
@@ -214,25 +223,48 @@ def render_policy(profiles: list[str], policy: dict) -> str:
     lines += [f"  {k}: {_scalar(ident[k])}" for k in ("human", "scheduled_owner") if k in ident]
     lines.append("approvers: {}")
     text = "\n".join(lines) + "\n"
+    if sum("redact_patterns" in line.split("#", 1)[0] for line in text.splitlines()) != 1:
+        raise AgentfilesError("the policy mentions redact_patterns outside its own key (in an identity?); "
+                              "agent-ledger couldn't read it")
     if yaml.safe_load(text) != policy:
         raise AgentfilesError("internal: the rendered policy doesn't read back as the merged policy")
     return text
 
 
 def check_project_policy(path: Path, user_policy: dict | None) -> list[str]:
-    """Problems with a project's committed .agents/policy.yaml: it must parse, and its gates
-    must include every default gate and every gate in the user's policy (S2: a project adds
-    gates, never removes one)."""
+    """Problems with a project's committed .agents/policy.yaml. It must parse, and it may only
+    tighten what applies to you (S2: stricter wins at each level): it keeps every default and
+    user gate, sets no budget or LFS limit above yours, doesn't turn session archiving off,
+    allows no host you don't, and drops no sandboxed tier."""
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8-sig"))
     except (OSError, UnicodeDecodeError, yaml.YAMLError) as e:
         return [f"{path}: can't read it as YAML: {e}"]
     try:
-        parsed = parse_policy(raw, str(path))
+        project = parse_policy(raw or {}, str(path))
     except AgentfilesError as e:
         return [str(e)]
-    if "gates" not in parsed:
-        return []  # no gate list: every gate from the user's policy still applies
-    required = _union(list(DEFAULT_GATES), (user_policy or {}).get("gates", []))
-    missing = [g for g in required if g not in parsed["gates"]]
-    return [f"{path}: gates can be added, not removed; missing {', '.join(missing)}"] if missing else []
+    mine = merge_policy(DEFAULT_POLICY, parse_policy(user_policy, "your policy") if user_policy else {})
+    out = []
+    if "gates" in project:
+        missing = [g for g in mine["gates"] if g not in project["gates"]]
+        if missing:
+            out.append(f"{path}: gates can be added, not removed; missing {', '.join(missing)}")
+    for tier, b in (project.get("budgets") or {}).items():
+        for k, v in b.items():
+            cap = mine["budgets"].get(tier, {}).get(k)
+            if cap is not None and (_minutes(v) > _minutes(cap) if k == "wall_clock" else v > cap):
+                out.append(f"{path}: budgets.{tier}.{k} {v} is above yours ({cap}); a project can only lower it")
+    sec, msec = project.get("security") or {}, mine["security"]
+    wider = [h for h in sec.get("network_allow", []) if h not in msec["network_allow"]]
+    if wider:
+        out.append(f"{path}: network_allow adds {', '.join(wider)}, which your policy doesn't allow")
+    dropped = [t for t in msec["sandbox_unattended"] if "sandbox_unattended" in sec and t not in sec["sandbox_unattended"]]
+    if dropped:
+        out.append(f"{path}: sandbox_unattended drops tier {', '.join(map(str, dropped))}")
+    sess = (project.get("audit") or {}).get("sessions") or {}
+    if sess.get("archive") is False and mine["audit"]["sessions"].get("archive"):
+        out.append(f"{path}: audit.sessions.archive can't be turned off")
+    if "lfs_over_mb" in sess and sess["lfs_over_mb"] > mine["audit"]["sessions"]["lfs_over_mb"]:
+        out.append(f"{path}: audit.sessions.lfs_over_mb is above yours")
+    return out

@@ -131,7 +131,8 @@ the note when a tool accepts that.
 - `mode`: the last profile that sets it wins. `instructions`: appended in order, duplicates dropped.
 - `roles`: merged per role and per tool; later profiles override single entries. `roles:` in
   `local.yaml` is applied last, because the models you can use depend on the machine.
-- `policy`: stricter always wins, then `policy:` in `local.yaml` is applied the same way. Gates,
+- `policy`: stricter always wins, then `policy:` in `agentfiles.yaml` and then `local.yaml` are
+  applied the same way (each merges; neither replaces the other). Gates,
   `sandbox_unattended`, `redact_patterns` and audit `sinks` only accumulate; every budget figure
   and `lfs_over_mb` take the lowest value given; `network_allow` only narrows (a host must be in
   every list that sets one); session archiving stays on once any profile turns it on. `identity`
@@ -177,17 +178,25 @@ budgets). Agents read it to know which actions are gates and how big a run may b
 agent-ledger reads its `security.redact_patterns`. The file is written for a global sync only. A
 project's policy is its committed `.agents/policy.yaml`, written by hand;
 `agentfiles policy check [PATH]` checks it parses and keeps every default gate and every gate in
-your `~/.agents/policy.yaml` (a project adds gates, never removes one). Exit 0 ok, 1 a problem, 2
-no file.
+your `~/.agents/policy.yaml`, and that it only tightens the rest: no budget or `lfs_over_mb` above
+yours, no host you don't allow, no sandboxed tier dropped, archiving not turned off. Exit 0 ok, 1 a
+problem, 2 no file. Redact patterns must be one line, without control characters, ` #` or the text
+`redact_patterns`, which agent-ledger's strict reader can't read back.
 
 ### Commands
 
 `commands:` puts a command on PATH that runs a Python script from a source, pinned like
 everything else: `sync` writes a small shim to `bin_dir` (default `~/.local/bin`; set `bin_dir:` in
-`local.yaml`) that runs the script from the locked commit's tree with `python3 -I`, so neither the
-current directory nor `PYTHONPATH` can change what runs. The whole source tree is hashed into
-`agentfiles.lock`, `agentfiles update` reviews every change in the source before moving the pin,
-and a cleared cache makes the shim say to run `agentfiles sync`. Global sync only.
+`local.yaml`; it must be absolute) that runs the script from the locked commit's tree with
+`python3 -I -B`: the interpreter is the absolute path found at sync time, and neither the current
+directory, `PYTHONPATH`, a `sitecustomize.py` nor bytecode can change what runs. The whole source
+tree is hashed into `agentfiles.lock` (bytecode excluded) and its files are made read-only, and
+`agentfiles update` reviews every change in the source before moving the pin. The hash is checked
+at sync, not at every run, so an edit someone makes to the cached tree (after a `chmod`) runs
+until the next sync reports it; this guards against mistakes and upstream changes, not against
+your own user account. A command name that is a basic tool (`git`, `sh`, `python3` and so on) or
+already found elsewhere on PATH is refused, and a binary or symlink already in `bin_dir` is left
+alone. A cleared cache makes the shim say to run `agentfiles sync`. Global sync only.
 
 ## Per-machine settings (local.yaml)
 

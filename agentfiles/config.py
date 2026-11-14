@@ -99,6 +99,8 @@ class Command:
 
 
 _COMMAND_NAME = re.compile(r"[a-z][a-z0-9-]*")
+_RESERVED_COMMANDS = frozenset({"python", "python3", "sh", "bash", "env", "git", "ls", "cd", "rm", "cp", "mv",
+                                "cat", "sudo", "ssh", "pip", "pip3", "agentfiles"})
 
 
 def parse_commands(raw, where: str) -> dict:
@@ -115,7 +117,10 @@ def parse_commands(raw, where: str) -> dict:
     for name, ref in raw.items():
         if not isinstance(name, str) or not _COMMAND_NAME.fullmatch(name):
             raise AgentfilesError(f"{where}: command name {name!r} must be lowercase letters, digits and -")
-        if not isinstance(ref, str):
+        if name in _RESERVED_COMMANDS:
+            raise AgentfilesError(f"{where}: command name {name!r} would shadow a basic tool (or the shim's "
+                                  f"own python3); pick another name")
+        if not isinstance(ref, str) or any(ord(ch) < 32 for ch in ref):
             raise AgentfilesError(f"{where}: commands.{name} must be 'source:path/to/script.py'")
         source, path, entry = parse_ref(ref, "command")
         if entry or not path or path == "." or not path.endswith(".py"):
@@ -285,9 +290,15 @@ class Config:
             raise AgentfilesError(
                 f"{root} has no sources.yaml. Set AGENTFILES_HOME to your agentfiles repo.")
         self.settings = dict(DEFAULT_SETTINGS)
+        # `policy:` merges across the two files (stricter wins) instead of the later replacing it,
+        # so a machine's local.yaml can't drop what agentfiles.yaml tightened.
+        self.settings_policies: list[tuple[str, dict]] = []
         for fname in ("agentfiles.yaml", "local.yaml"):   # local.yaml: per-machine, gitignored
             if (root / fname).exists():
-                self.settings.update(read_yaml(root / fname))
+                data = read_yaml(root / fname)
+                if isinstance(data, dict) and "policy" in data:
+                    self.settings_policies.append((fname, data.pop("policy") or {}))
+                self.settings.update(data)
         self.sources = self._load_sources()
         self.profiles = self._load_profiles()
 
@@ -394,8 +405,8 @@ class Config:
         # because which models you can use depends on the machine's subscriptions.
         roles = merge_roles(roles, parse_roles(self.settings.get("roles"), "settings"))
         # A machine can tighten the policy (lower a budget, add a gate), never loosen it.
-        if policy is not None and self.settings.get("policy"):
-            policy = merge_policy(policy, parse_policy(self.settings["policy"], "settings"))
+        for fname, raw in self.settings_policies:
+            policy = merge_policy(DEFAULT_POLICY if policy is None else policy, parse_policy(raw, fname))
         for c in commands.values():
             if c.source not in self.sources:
                 raise AgentfilesError(f"command {c.name} (profile {c.origin}): unknown source {c.source!r}; "

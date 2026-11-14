@@ -250,9 +250,9 @@ def error(msg: str) -> None:
 
 def _policy_summary(policy: dict) -> str:
     gates = policy.get("gates") or []
-    budgets = "; ".join(f"{tier} ${b.get('usd')}, {b.get('tokens'):,} tokens, {b.get('wall_clock')}, "
+    budgets = "; ".join(f"{tier} ${b.get('usd')}, {b.get('tokens')} tokens, {b.get('wall_clock')}, "
                         f"{b.get('max_parallel_agents')} agents"
-                        for tier, b in (policy.get("budgets") or {}).items())
+                        for tier, b in (policy.get("budgets") or {}).items() if isinstance(b, dict))
     return f"Policy: {len(gates)} gates ({', '.join(gates)}); budgets: {budgets or '(none)'}"
 
 

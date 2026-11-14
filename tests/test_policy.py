@@ -51,7 +51,12 @@ class PolicyMergeTest(unittest.TestCase):
         self.assertEqual(p["identity"], {"human": "b@github", "scheduled_owner": "creator"})
 
     def test_bad_policies_are_named(self):
-        cases = [({"gate": []}, "unknown keys"), ({"gates": "spend"}, "list of gate ids"),
+        cases = [({"version": True}, "version"), ({"budgets": [1]}, "must map"),
+                 ({"audit": {"sinks": [[1]]}}, "M0"),
+                 ({"security": {"redact_patterns": ["secret #[0-9]+"]}}, "can't read those back"),
+                 ({"security": {"redact_patterns": ["a\x0bb"]}}, "control characters"),
+                 ({"security": {"redact_patterns": ["redact_patterns"]}}, "redact_patterns"),
+                 ({"gate": []}, "unknown keys"), ({"gates": "spend"}, "list of gate ids"),
                  ({"budgets": {"tier9": {}}}, "unknown tier"), ({"budgets": {"tier2": {"usd": 0}}}, "positive"),
                  ({"budgets": {"tier2": {"usd": True}}}, "positive"),
                  ({"budgets": {"tier2": {"wall_clock": "soon"}}}, "duration"),
@@ -75,6 +80,11 @@ class PolicyRenderTest(unittest.TestCase):
         # agent-ledger's reader takes `redact_patterns:` then `    - '<pattern>'` lines only.
         self.assertIn("  redact_patterns:\n    - '\\bacme_[a-z0-9]{32}\\b'\n    - 'it''s'\n", text)
 
+    def test_an_identity_that_would_confuse_agent_ledger_is_refused(self):
+        p = merge_policy(DEFAULT_POLICY, parse_policy({"identity": {"human": "redact_patterns@github"}}, "t"))
+        with self.assertRaisesRegex(AgentfilesError, "outside its own key"):
+            render_policy(["t"], p)
+
     def test_tricky_values_still_read_back(self):
         p = merge_policy(DEFAULT_POLICY, parse_policy(
             {"gates": ["no", "on", "null"], "security": {"redact_patterns": ["#x", "a: b", "- y", "0x1f"]}}, "t"))
@@ -97,6 +107,19 @@ class ProjectPolicyCheckTest(Fixture):
         user = merge_policy(DEFAULT_POLICY, {"gates": ["prod-data"]})
         problems = self.check("gates: [" + ", ".join(DEFAULT_GATES) + "]\n", user)
         self.assertIn("missing prod-data", problems[0])
+
+    def test_a_project_can_only_tighten_the_rest_too(self):
+        cases = [("budgets:\n  tier2: {usd: 9999}\n", "above yours"),
+                 ("budgets:\n  tier3: {wall_clock: 30d}\n", "above yours"),
+                 ("security:\n  network_allow: [evil.example.com]\n", "adds evil.example.com"),
+                 ("security:\n  sandbox_unattended: [3]\n", "drops tier 2"),
+                 ("audit:\n  sessions: {archive: false}\n", "can't be turned off"),
+                 ("audit:\n  sessions: {lfs_over_mb: 500}\n", "lfs_over_mb")]
+        for text, expect in cases:
+            with self.subTest(text=text):
+                problems = self.check(text)
+                self.assertTrue(any(expect in p for p in problems), problems)
+        self.assertEqual(self.check("budgets:\n  tier2: {usd: 10}\nsecurity:\n  network_allow: [github.com]\n"), [])
 
     def test_no_gate_list_keeps_every_gate(self):
         self.assertEqual(self.check("budgets:\n  tier2: {usd: 20}\n"), [])
@@ -153,6 +176,15 @@ class PolicySyncTest(Fixture):
         b = yaml.safe_load(self.policy.read_text())["budgets"]["tier2"]
         self.assertEqual((b["usd"], b["tokens"]), (10, 8000000))
 
+    def test_agentfiles_yaml_and_local_yaml_policies_combine(self):
+        committed = (self.repo / "agentfiles.yaml").read_text()
+        (self.repo / "agentfiles.yaml").write_text(committed + "policy:\n  gates: [extra-gate]\n  budgets: {tier2: {usd: 5}}\n")
+        write(self.repo / "local.yaml", "policy:\n  budgets: {tier3: {usd: 100}}\n")
+        self.sync("base")
+        p = yaml.safe_load(self.policy.read_text())
+        self.assertIn("extra-gate", p["gates"], "local.yaml can't drop what agentfiles.yaml tightened")
+        self.assertEqual((p["budgets"]["tier2"]["usd"], p["budgets"]["tier3"]["usd"]), (5, 100))
+
     def test_dropping_policy_removes_the_file_unless_edited(self):
         self.sync("governed")
         self.sync("base")
@@ -189,7 +221,10 @@ class CommandTest(Fixture):
         super().setUp()
         # A git source holding a stdlib Python CLI, pinned like any other source.
         tool = self.tmp / "tool"
-        write(tool / "ci" / "run.py", "import sys\nprint('tool ran with', sys.argv[1:], 'isolated', sys.flags.isolated)\n")
+        write(tool / "ci" / "run.py", "import os, sys\n"
+              "sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src'))\n"
+              "import pkg\n"
+              "print('tool ran with', sys.argv[1:], 'isolated', sys.flags.isolated)\n")
         write(tool / "src" / "pkg.py", "VERSION = 1\n")
         for args in (["init", "-q", "-b", "main"], ["add", "-A"],
                      ["-c", "user.name=t", "-c", "user.email=t@e", "commit", "-q", "-m", "v1"]):
@@ -238,6 +273,72 @@ class CommandTest(Fixture):
         self.assertIn("run `agentfiles sync` to restore it", proc.stderr)
         self.sync("cli")
         self.assertIn("tool ran with", self.run_shim().stdout)
+
+    def test_running_the_command_doesnt_make_the_next_sync_cry_tamper(self):
+        self.sync("cli")
+        self.assertEqual(self.run_shim().returncode, 0)
+        tree = next((self.home / ".cache" / "agentfiles" / "trees" / "tool").iterdir())
+        self.assertFalse(list(tree.rglob("__pycache__")), "-B keeps bytecode out of the pinned tree")
+        cache = tree / "src" / "__pycache__"
+        os.chmod(tree / "src", 0o755)
+        cache.mkdir()
+        (cache / "pkg.cpython-312.pyc").write_bytes(b"\x00junk")  # as another interpreter might leave
+        code, out = self.run_cli("lock", "--frozen")
+        self.assertEqual(code, 0, out)
+        self.sync("cli")
+
+    def test_the_pinned_tree_is_read_only_and_python_is_an_absolute_path(self):
+        self.sync("cli")
+        tree = next((self.home / ".cache" / "agentfiles" / "trees" / "tool").iterdir())
+        self.assertFalse(os.access(tree / "ci" / "run.py", os.W_OK))
+        exec_line = self.shim.read_text().splitlines()[-1]
+        self.assertTrue(exec_line.startswith("exec '/"), exec_line)
+        self.assertIn(" -I -B ", exec_line)
+
+    def test_a_sitecustomize_on_pythonpath_is_ignored(self):
+        self.sync("cli")
+        evil = self.tmp / "evil"
+        write(evil / "sitecustomize.py", "print('HIJACKED')\n")
+        write(evil / "pkg.py", "print('HIJACKED')\n")
+        proc = subprocess.run([str(self.shim)], capture_output=True, text=True, cwd=evil,
+                              env=dict(os.environ, PYTHONPATH=str(evil)))
+        self.assertNotIn("HIJACKED", proc.stdout + proc.stderr)
+        self.assertIn("tool ran with", proc.stdout)
+
+    def test_a_command_that_would_shadow_a_program_is_refused(self):
+        other = self.tmp / "otherbin"
+        write(other / "mytool", "#!/bin/sh\n")
+        os.chmod(other / "mytool", 0o755)
+        old = os.environ["PATH"]
+        os.environ["PATH"] = f"{other}:{old}"
+        try:
+            code, out = self.run_cli("sync", "cli", "--targets", "codex")
+        finally:
+            os.environ["PATH"] = old
+        self.assertEqual(code, 2)
+        self.assertIn("would shadow", out)
+        for name in ("python3", "git", "sh"):
+            write(self.repo / "profiles" / "bad.yaml", f"extends: [base]\ncommands: {{{name}: tool:ci/run.py}}\n")
+            with self.subTest(name=name):
+                self.assertIn("would shadow a basic tool", self.run_cli("sync", "bad", "--targets", "codex")[1])
+
+    def test_a_binary_or_symlink_already_in_bin_dir_is_left_alone(self):
+        self.bin.mkdir(parents=True)
+        self.shim.write_bytes(b"\x7fELF\xff\xfe")
+        out = self.sync("cli")
+        self.assertEqual(self.shim.read_bytes(), b"\x7fELF\xff\xfe")
+        self.assertIn("leaving it alone", out)
+        self.shim.unlink()
+        target = self.tmp / "elsewhere"
+        self.shim.symlink_to(target)
+        self.sync("cli")
+        self.assertFalse(target.exists(), "a dangling symlink isn't followed")
+
+    def test_a_relative_bin_dir_is_refused(self):
+        write(self.repo / "local.yaml", "bin_dir: relbin\n")
+        code, out = self.run_cli("sync", "cli", "--targets", "codex")
+        self.assertEqual(code, 2)
+        self.assertIn("absolute path", out)
 
     def test_a_new_upstream_commit_doesnt_change_the_command_until_update(self):
         self.sync("cli")

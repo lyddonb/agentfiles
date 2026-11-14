@@ -143,6 +143,12 @@ class Store:
             except TypeError:  # Python without extraction filters
                 tf.extractall(tmp)
         (tmp / ".agentfiles-complete").write_text(commit + "\n")
+        # Files read-only: a command runs straight from this tree, so an edit takes a deliberate
+        # chmod (and the next sync's hash check still catches it). Folders stay writable so the
+        # cache can be deleted.
+        for f in tmp.rglob("*"):
+            if f.is_file() and not f.is_symlink():
+                f.chmod(f.stat().st_mode & ~0o222)
         if dest.exists():
             shutil.rmtree(dest)
         tmp.rename(dest)
