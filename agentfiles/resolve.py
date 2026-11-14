@@ -55,6 +55,7 @@ class Plan:
     skills: list[Skill]          # standalone skills from `skills:`
     plugins: list[Plugin]
     digests: dict[str, tuple[str, str]]   # item key -> (commit, hash)
+    commands: dict[str, tuple[Path, str]] = field(default_factory=dict)  # name -> (script, commit)
 
 
 # --------------------------------------------------------------------------- skills
@@ -263,7 +264,17 @@ def build_plan(resolved: Resolved, store: Store, *, frozen: bool = False) -> Pla
         plugin = resolve_plugin(item, tree)
         plugins.append(plugin)
         digests[item.key] = (store.locked_commit(item.source, frozen=frozen), tree_hash(plugin.root))
-    return Plan(resolved=resolved, skills=skills, plugins=plugins, digests=digests)
+    commands: dict[str, tuple[Path, str]] = {}
+    for c in resolved.commands.values():
+        tree = store.tree(c.source, frozen=frozen)
+        script = (tree / c.path).resolve()
+        if not script.is_file() or tree.resolve() not in script.parents:
+            raise AgentfilesError(f"command {c.name} (profile {c.origin}): {c.path} not found in source {c.source}")
+        commit = store.locked_commit(c.source, frozen=frozen)
+        commands[c.name] = (script, commit)
+        # The script runs the whole source tree, so the whole tree is what gets pinned and hashed.
+        digests[c.key] = (commit, tree_hash(tree))
+    return Plan(resolved=resolved, skills=skills, plugins=plugins, digests=digests, commands=commands)
 
 
 def verify_and_lock(plan: Plan, store: Store, *, frozen: bool) -> None:
