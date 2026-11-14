@@ -19,6 +19,12 @@ sources:
     git: https://github.com/lyddonb/agent-kit
     ref: main
 
+  # agent-ledger: the `ledger` CLI for governed agent runs (standard-library Python). Installed
+  # as a command, not skills: see `commands:` in profiles/beau.yaml. Private for now.
+  agent-ledger:
+    git: https://github.com/lyddonb/agent-ledger
+    ref: main
+
   # Anthropic's example and document skills (docx/pdf/pptx/xlsx, skill-creator, mcp-builder...).
   anthropic-skills:
     git: https://github.com/anthropics/skills
