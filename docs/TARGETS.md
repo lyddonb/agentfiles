@@ -116,6 +116,8 @@ Safety rules:
 | `~/.local/share/agentfiles/mcp/` | MCP snippets |
 | `~/.local/state/agentfiles/state.json` | what the last global sync installed (used for pruning) |
 | `~/.claude/rules/agentfiles.md`, `~/.agents/roles.yaml` | always-on instructions for Claude Code; model roles |
+| `~/.agents/policy.yaml` | the agent policy, when a profile sets `policy:` |
+| `~/.local/bin/<command>` | `commands:` shims (`bin_dir` in `local.yaml`); each runs a script from a cached tree |
 | `~/.local/share/agentfiles/instructions/` | paste-in instruction snippets (Cursor, sometimes OpenCode) |
 | `<project>/.agentfiles/` | the same three for a project (gitignore it) |
 

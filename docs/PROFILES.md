@@ -77,6 +77,12 @@ roles:                          # model per subagent role, per tool (~/.agents/r
   judgment:  {claude-code: opus}
   explorer:  {claude-code: sonnet}
   reviewers: {claude-code: [opus, sonnet]}   # a list = one reviewer per entry
+policy:                         # the agent policy (agent-ledger S2), written to ~/.agents/policy.yaml
+  gates: [prod-data]            # added to the ten default gates
+  budgets: {tier2: {usd: 40}}   # lowered; budgets can only go down
+  identity: {human: you@github}
+commands:                       # a command on PATH that runs a script from a pinned source
+  ledger: agent-ledger:ci/run_ledger.py
 
 exclude:                        # drop items inherited through `extends`
   skills: [vercel:skills/composition-patterns]
@@ -125,6 +131,12 @@ the note when a tool accepts that.
 - `mode`: the last profile that sets it wins. `instructions`: appended in order, duplicates dropped.
 - `roles`: merged per role and per tool; later profiles override single entries. `roles:` in
   `local.yaml` is applied last, because the models you can use depend on the machine.
+- `policy`: stricter always wins, then `policy:` in `local.yaml` is applied the same way. Gates,
+  `sandbox_unattended`, `redact_patterns` and audit `sinks` only accumulate; every budget figure
+  and `lfs_over_mb` take the lowest value given; `network_allow` only narrows (a host must be in
+  every list that sets one); session archiving stays on once any profile turns it on. `identity`
+  is not a strictness question: the last profile that sets a field wins. `approvers` is reserved.
+- `commands`: the last profile that names a command wins.
 
 ### Modes and roles
 
@@ -157,6 +169,26 @@ text in a project, because its global copy is a paste-in snippet. The comparison
 global sync, so re-run `sync --project` in a project after you change your global profiles. Add `.agentfiles/` to the
 project's `.gitignore`. Teammates without agentfiles can use `agentfiles emit-apm`.
 
+### Policy
+
+`policy:` is opt-in: `sync` writes `~/.agents/policy.yaml` only when a profile in the set has the
+key (`policy: {}` takes the defaults: the ten gates from agent-ledger's S2 and its tier 2 and 3
+budgets). Agents read it to know which actions are gates and how big a run may be, and
+agent-ledger reads its `security.redact_patterns`. The file is written for a global sync only. A
+project's policy is its committed `.agents/policy.yaml`, written by hand;
+`agentfiles policy check [PATH]` checks it parses and keeps every default gate and every gate in
+your `~/.agents/policy.yaml` (a project adds gates, never removes one). Exit 0 ok, 1 a problem, 2
+no file.
+
+### Commands
+
+`commands:` puts a command on PATH that runs a Python script from a source, pinned like
+everything else: `sync` writes a small shim to `bin_dir` (default `~/.local/bin`; set `bin_dir:` in
+`local.yaml`) that runs the script from the locked commit's tree with `python3 -I`, so neither the
+current directory nor `PYTHONPATH` can change what runs. The whole source tree is hashed into
+`agentfiles.lock`, `agentfiles update` reviews every change in the source before moving the pin,
+and a cleared cache makes the shim say to run `agentfiles sync`. Global sync only.
+
 ## Per-machine settings (local.yaml)
 
 ```yaml
@@ -164,6 +196,9 @@ default_profiles: [beau]                 # what a bare `agentfiles sync` install
 targets: [claude-code, codex, pi]        # tools on this machine
 roles:                                   # models this machine can use (wins over profiles)
   code: {cursor: composer-2}
+policy:                                  # tighten the policy on this machine (never loosen it)
+  budgets: {tier2: {usd: 20}}
+bin_dir: ~/bin                           # where `commands:` shims go (default ~/.local/bin)
 source_overrides:
   mine: { path: ~/src/agent-kit }        # develop against a checkout
 ```
