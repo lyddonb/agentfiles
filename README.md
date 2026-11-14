@@ -111,6 +111,16 @@ roles:                            # which model each subagent role uses, per too
   reviewers: {claude-code: [opus, sonnet], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
 ```
 
+A profile can also set the agent **policy** (gates, budgets and security rules from
+agent-ledger's S2; stricter always wins across profiles) and pinned **commands** such as
+agent-ledger's `ledger`:
+
+```yaml
+policy: {}                        # the defaults; profiles and local.yaml can only tighten them
+commands:
+  ledger: agent-ledger:ci/run_ledger.py
+```
+
 `sync` writes the always-on block to `~/.claude/rules/agentfiles.md` (Claude Code), a marked
 block in `~/.codex/AGENTS.md` and `~/.pi/agent/AGENTS.md`, and paste-in snippets for Cursor and,
 when needed, OpenCode. Projects get only what differs from your global setup. Details:

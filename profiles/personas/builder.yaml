@@ -37,6 +37,11 @@ roles:
   explorer:  {claude-code: sonnet, cursor: grok-4.7-xhigh-fast}
   reviewers: {claude-code: [opus, sonnet], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
 
+# The agent policy (agent-ledger spec S2), written to ~/.agents/policy.yaml: which actions are
+# gates, run budgets, security and audit rules. `{}` takes the defaults: all ten gates, tier 2
+# and 3 budgets. Profiles and local.yaml can only tighten it (add gates, lower budgets).
+policy: {}
+
 skills:
   - anthropic-skills:skills/webapp-testing     # drive a local web app with Playwright to verify UI changes
   - anthropic-skills:skills/mcp-builder        # build MCP servers well

@@ -142,7 +142,9 @@ def tree_hash(path: Path) -> str:
         return "sha256:" + h.hexdigest()
     for p in sorted(path.rglob("*")):
         rel = p.relative_to(path).as_posix()
-        if ".git" in p.relative_to(path).parts:
+        parts = p.relative_to(path).parts
+        # Bytecode a command's run can write isn't content: hashing it would call the tree tampered.
+        if ".git" in parts or "__pycache__" in parts or p.suffix in (".pyc", ".pyo"):
             continue
         if p.is_symlink():
             h.update(f"L {rel} -> {os.readlink(p)}\n".encode())

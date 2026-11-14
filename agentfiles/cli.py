@@ -8,9 +8,12 @@ import sys
 import textwrap
 from pathlib import Path
 
+import yaml
+
 from . import __version__
 from .apm import emit_apm
 from .config import KNOWN_TARGETS, Config, Profile, parse_profile
+from .policy import check_project_policy
 from .resolve import build_plan, verify_and_lock
 from .store import Store
 from .targets import Applier, Desired, Scope, desired_state
@@ -116,6 +119,8 @@ def _paths_used(cfg: Config, source: str) -> list[str]:
         for it in prof.skills + prof.plugins:
             if it.source == source:
                 paths.add(it.path if it.path else ".")
+        if any(c.source == source for c in prof.commands.values()):
+            paths.add(".")  # a command runs the whole source tree
     if not paths:
         paths = set(cfg.sources[source].watch)
     return sorted(paths)
@@ -180,6 +185,10 @@ def cmd_list(args) -> int:
     if r.roles:
         info("Roles: " + "; ".join(f"{role}: " + ", ".join(f"{t}={m}" for t, m in tools.items())
                                    for role, tools in r.roles.items()))
+    if r.policy is not None:
+        info(_policy_summary(r.policy))
+    if r.commands:
+        info("Commands: " + ", ".join(f"{c.name} ({c.source}:{c.path})" for c in r.commands.values()))
     info("\nSkills:")
     for it in r.skills:
         info(f"  {it.ref}   [{it.origin}]")
@@ -216,11 +225,58 @@ def cmd_status(args) -> int:
     info(f"Always-on instructions: {', '.join(short(p) for p in instr) or '(none)'}")
     roles = state.get("roles") or {}
     info(f"Model roles file: {short(roles['path']) if roles.get('path') else '(none)'}")
+    pol = state.get("policy") or {}
+    if pol.get("path") and Path(pol["path"]).exists():
+        info(f"Policy file: {short(pol['path'])}")
+        try:
+            info("  " + _policy_summary(yaml.safe_load(Path(pol["path"]).read_text()) or {}))
+        except yaml.YAMLError:
+            warn(f"{short(pol['path'])} doesn't parse as YAML")
+    else:
+        info("Policy file: (none)")
+    cmds = state.get("commands") or {}
+    info(f"Commands: {', '.join(short(p) for p in sorted(cmds)) or '(none)'}")
     lock = read_json(repo_root() / "agentfiles.lock", default={}) or {}
     if lock.get("sources"):
         info("\nLocked sources:")
         for n, s in sorted(lock["sources"].items()):
             info(f"  {n}: {s['commit'][:12]} ({s['ref']}, locked {s.get('locked_at', '?')})")
+    return 0
+
+
+def error(msg: str) -> None:
+    print(f"agentfiles: error: {msg}", file=sys.stderr)
+
+
+def _policy_summary(policy: dict) -> str:
+    gates = policy.get("gates") or []
+    budgets = "; ".join(f"{tier} ${b.get('usd')}, {b.get('tokens')} tokens, {b.get('wall_clock')}, "
+                        f"{b.get('max_parallel_agents')} agents"
+                        for tier, b in (policy.get("budgets") or {}).items() if isinstance(b, dict))
+    return f"Policy: {len(gates)} gates ({', '.join(gates)}); budgets: {budgets or '(none)'}"
+
+
+def cmd_policy(args) -> int:
+    """Check a project's committed .agents/policy.yaml (S2): it parses, and drops no gate."""
+    path = Path(args.path) if args.path else Path.cwd() / ".agents" / "policy.yaml"
+    if not path.exists():
+        error(f"{path} not found")
+        return 2
+    user = None
+    user_path = Path.home() / ".agents" / "policy.yaml"
+    if user_path.exists():
+        try:
+            user = yaml.safe_load(user_path.read_text()) or {}
+        except yaml.YAMLError as e:
+            error(f"{short(user_path)} doesn't parse: {e}")
+            return 2
+    problems = check_project_policy(path, user)
+    for p in problems:
+        error(p)
+    if problems:
+        return 1
+    info(f"ok: {path} parses and keeps every gate"
+         + (f" in the defaults and {short(user_path)}" if user is not None else " in the defaults"))
     return 0
 
 
@@ -361,6 +417,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--yes", "-y", action="store_true")
     s.add_argument("--dry-run", "-n", action="store_true")
     s.set_defaults(func=cmd_uninstall)
+
+    s = sub.add_parser("policy", help="check a project's .agents/policy.yaml against the gate rules")
+    psub = s.add_subparsers(dest="policy_command", required=True)
+    pc = psub.add_parser("check", help="it must parse and keep every default and user gate")
+    pc.add_argument("path", nargs="?", help="the policy file (default: .agents/policy.yaml here)")
+    pc.set_defaults(func=cmd_policy)
 
     s = sub.add_parser("doctor", help="check tools, directories and config")
     s.set_defaults(func=cmd_doctor)

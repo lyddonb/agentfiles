@@ -4,6 +4,14 @@ extends: [builder, eng-lead, knowledge]
 # Per-machine choice: set `default_profiles: [beau]` in local.yaml on your laptop so
 # a bare `agentfiles sync` installs this. Keep work-only items in a separate private repo.
 
+# Who you are in ledger entries (agent-ledger spec S2).
+policy:
+  identity: {human: lyddonb@github}
+
+# `ledger`, pinned to the commit of agent-ledger in agentfiles.lock and run with `python3 -I`.
+commands:
+  ledger: agent-ledger:ci/run_ledger.py
+
 plugins:
   # Replaces Claude Code's compaction summary with Jev decisions: stale tool calls/results are
   # dropped, everything kept stays verbatim. Claude Code only (a function-hook module, no skills).

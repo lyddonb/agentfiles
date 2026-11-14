@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+from .policy import DEFAULT_POLICY, merge_policy, parse_policy
 from .util import NAME_RE, AgentfilesError, read_yaml
 
 KNOWN_TARGETS = ("claude-code", "codex", "cursor", "opencode", "pi")
@@ -62,6 +64,8 @@ class Profile:
     mode: str | None = None              # skill the always-on instructions point at ("" clears)
     instructions: list[str] = field(default_factory=list)  # extra always-on text, in order
     roles: dict = field(default_factory=dict)  # role -> {tool: model or [models]}
+    policy: dict | None = None  # partial agent policy (S2); None: this profile doesn't set one
+    commands: dict = field(default_factory=dict)  # command name -> Command
     file: Path | None = None
 
 
@@ -76,6 +80,53 @@ class Resolved:
     mode: str | None = None
     instructions: list[str] = field(default_factory=list)
     roles: dict = field(default_factory=dict)
+    policy: dict | None = None    # merged agent policy; None when no profile asks for one
+    commands: dict = field(default_factory=dict)
+    bin_dir: str = "~/.local/bin"   # where command shims go (setting `bin_dir`)
+
+
+@dataclass(frozen=True)
+class Command:
+    """A command on PATH that runs a Python script from a pinned source with `python3 -I`."""
+    name: str
+    source: str
+    path: str      # the script, inside the source
+    origin: str    # the profile that set it
+
+    @property
+    def key(self) -> str:
+        return f"command:{self.name}"
+
+
+_COMMAND_NAME = re.compile(r"[a-z][a-z0-9-]*")
+_RESERVED_COMMANDS = frozenset({"python", "python3", "sh", "bash", "env", "git", "ls", "cd", "rm", "cp", "mv",
+                                "cat", "sudo", "ssh", "pip", "pip3", "agentfiles"})
+
+
+def parse_commands(raw, where: str) -> dict:
+    """`commands:` maps a command name to `source:path/to/script.py`:
+
+    commands:
+      ledger: agent-ledger:ci/run_ledger.py
+    """
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        raise AgentfilesError(f"{where}: commands must map a command name to 'source:path'")
+    out = {}
+    for name, ref in raw.items():
+        if not isinstance(name, str) or not _COMMAND_NAME.fullmatch(name):
+            raise AgentfilesError(f"{where}: command name {name!r} must be lowercase letters, digits and -")
+        if name in _RESERVED_COMMANDS:
+            raise AgentfilesError(f"{where}: command name {name!r} would shadow a basic tool (or the shim's "
+                                  f"own python3); pick another name")
+        if not isinstance(ref, str) or any(ord(ch) < 32 for ch in ref):
+            raise AgentfilesError(f"{where}: commands.{name} must be 'source:path/to/script.py'")
+        source, path, entry = parse_ref(ref, "command")
+        if entry or not path or path == "." or not path.endswith(".py"):
+            raise AgentfilesError(f"{where}: commands.{name} must name a .py script, like 'source:path/run.py'")
+        out[name] = Command(name, source, path, where.removeprefix("profile "))
+    return out
 
 
 # --------------------------------------------------------------------------- parsing
@@ -183,7 +234,7 @@ def merge_roles(base: dict, over: dict) -> dict:
 
 def parse_profile(name: str, data: dict, file: Path | None = None) -> Profile:
     unknown = set(data) - {"name", "description", "extends", "skills", "plugins", "mcp",
-                           "exclude", "targets", "mode", "instructions", "roles"}
+                           "exclude", "targets", "mode", "instructions", "roles", "policy", "commands"}
     if unknown:
         raise AgentfilesError(f"profile {name}: unknown keys {sorted(unknown)}")
     targets = data.get("targets")
@@ -203,6 +254,8 @@ def parse_profile(name: str, data: dict, file: Path | None = None) -> Profile:
         mode=_parse_mode(data, name),
         instructions=_parse_instructions(data.get("instructions"), name),
         roles=parse_roles(data.get("roles"), f"profile {name}"),
+        policy=parse_policy(data["policy"] or {}, f"profile {name}") if "policy" in data else None,
+        commands=parse_commands(data.get("commands"), f"profile {name}"),
         file=file,
     )
 
@@ -237,9 +290,15 @@ class Config:
             raise AgentfilesError(
                 f"{root} has no sources.yaml. Set AGENTFILES_HOME to your agentfiles repo.")
         self.settings = dict(DEFAULT_SETTINGS)
+        # `policy:` merges across the two files (stricter wins) instead of the later replacing it,
+        # so a machine's local.yaml can't drop what agentfiles.yaml tightened.
+        self.settings_policies: list[tuple[str, dict]] = []
         for fname in ("agentfiles.yaml", "local.yaml"):   # local.yaml: per-machine, gitignored
             if (root / fname).exists():
-                self.settings.update(read_yaml(root / fname))
+                data = read_yaml(root / fname)
+                if isinstance(data, dict) and "policy" in data:
+                    self.settings_policies.append((fname, data.pop("policy") or {}))
+                self.settings.update(data)
         self.sources = self._load_sources()
         self.profiles = self._load_profiles()
 
@@ -310,6 +369,8 @@ class Config:
         mode: str | None = None
         instructions: list[str] = []
         roles: dict = {}
+        policy: dict | None = None
+        commands: dict = {}
         targets = list(self.settings.get("targets") or KNOWN_TARGETS)
         for prof in order:
             if prof.mode is not None:
@@ -318,6 +379,9 @@ class Config:
                 if text not in instructions:
                     instructions.append(text)
             roles = merge_roles(roles, prof.roles)
+            if prof.policy is not None:
+                policy = merge_policy(DEFAULT_POLICY if policy is None else policy, prof.policy)
+            commands.update(prof.commands)
             for kind, bucket in (("skills", skills), ("plugins", plugins)):
                 for ex in prof.exclude.get(kind) or []:
                     bucket.pop(f"{kind[:-1]}:{ex}", None)
@@ -340,6 +404,13 @@ class Config:
         # Per-machine role overrides (local.yaml / agentfiles.yaml) win over profiles,
         # because which models you can use depends on the machine's subscriptions.
         roles = merge_roles(roles, parse_roles(self.settings.get("roles"), "settings"))
+        # A machine can tighten the policy (lower a budget, add a gate), never loosen it.
+        for fname, raw in self.settings_policies:
+            policy = merge_policy(DEFAULT_POLICY if policy is None else policy, parse_policy(raw, fname))
+        for c in commands.values():
+            if c.source not in self.sources:
+                raise AgentfilesError(f"command {c.name} (profile {c.origin}): unknown source {c.source!r}; "
+                                      f"add it to sources.yaml")
 
         def with_source_targets(it: Item) -> Item:
             src = self.sources[it.source].targets
@@ -348,4 +419,5 @@ class Config:
         return Resolved(profiles=[p.name for p in order],
                         skills=[with_source_targets(i) for i in skills.values()],
                         plugins=[with_source_targets(i) for i in plugins.values()], mcp=mcp, targets=targets,
-                        mode=mode, instructions=instructions, roles=roles)
+                        mode=mode, instructions=instructions, roles=roles, policy=policy, commands=commands,
+                        bin_dir=str(self.settings.get("bin_dir") or "~/.local/bin"))

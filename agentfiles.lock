@@ -1,5 +1,9 @@
 {
   "items": {
+    "command:ledger": {
+      "commit": "d17a76716217e285dbbf0d4e3b7d267fc81e505f",
+      "hash": "sha256:db7d27cc1feac271114fd5c07af0fdcf77eab1d511aa318022529f6caed3e9dc"
+    },
     "plugin:anthropic-claude-code:plugins/feature-dev": {
       "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
       "hash": "sha256:1e8cb8fa455dcedf40fa696296dff0029e1b12a0237badd612c36b36099ea6f4"
@@ -106,6 +110,12 @@
     }
   },
   "sources": {
+    "agent-ledger": {
+      "commit": "d17a76716217e285dbbf0d4e3b7d267fc81e505f",
+      "git": "https://github.com/lyddonb/agent-ledger",
+      "locked_at": "2026-11-14T21:05:59Z",
+      "ref": "main"
+    },
     "anthropic-claude-code": {
       "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
       "git": "https://github.com/anthropics/claude-code",
