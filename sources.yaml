@@ -20,10 +20,11 @@ sources:
     ref: main
 
   # agent-ledger: the `ledger` CLI for governed agent runs (standard-library Python). Installed
-  # as a command, not skills: see `commands:` in profiles/beau.yaml. Private for now.
+  # as a command, not skills: see `commands:` in profiles/beau.yaml. Pinned to a release tag:
+  # format v1 and the command names are frozen from v1.0.0.
   agent-ledger:
     git: https://github.com/lyddonb/agent-ledger
-    ref: main
+    ref: v1.0.0
 
   # Anthropic's example and document skills (docx/pdf/pptx/xlsx, skill-creator, mcp-builder...).
   anthropic-skills:
