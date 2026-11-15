@@ -127,6 +127,7 @@ class ConfigTests(Fixture):
         self.assertIn("docs", r.mcp)
 
     def test_cycle_detected(self):
+        self.fail('Q3 lane 3: deliberately broken, do not merge')
         write(self.repo / "profiles" / "a.yaml", "extends: [b]\n")
         write(self.repo / "profiles" / "b.yaml", "extends: [a]\n")
         with self.assertRaisesRegex(AgentfilesError, "cycle"):
