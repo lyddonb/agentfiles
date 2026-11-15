@@ -25,24 +25,28 @@
       "hash": "sha256:489e57941ff062f9c5257c043c6d36f824c91a6678d8e830fcb66692b8ee0f21"
     },
     "plugin:mine:@bstack": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
-      "hash": "sha256:025ff03b41e70e5504abb04dd99343b0ba5abcb8148602485f04d0cb67d01e5e"
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "hash": "sha256:cda8bc630ee821056358754deb449a6ae5bec45ea0fe5d42f1c3ca7a18240eff"
     },
     "plugin:mine:@eng-leadership": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
       "hash": "sha256:930fdb406a73ce26ab27f7a4315636c551598586f6ce6f4a599e5a680539628a"
     },
     "plugin:mine:@essentials": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
-      "hash": "sha256:896b714298fe3bfbc4fa4df24bdce5f65f0b0a1864c941d573acbbdec94701f6"
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "hash": "sha256:3306ab53428bce807b68f8c8878c4acba455c9eb578e610e2e47725c846288fc"
     },
     "plugin:mine:@principles": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
-      "hash": "sha256:376a1d7d3b3a226a47abdb625535e1f816263263c5661fe0e228613f398aa207"
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "hash": "sha256:8b501afa1a9f8bd65318e215ccf6b7d68c33ab09329c198238f839b180c92950"
     },
     "plugin:mine:@research-tools": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
       "hash": "sha256:09102b7d7a40d63c9c537709be8ce3b12ec23dd8038c77037e402980d9d9d2a0"
+    },
+    "plugin:mine:@video": {
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "hash": "sha256:6673153458e8612eea4cdd8e7ec2e009b077ccd146ce587127e0747465c928f3"
     },
     "plugin:obsidian:@obsidian": {
       "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
@@ -84,13 +88,13 @@
       "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
       "hash": "sha256:c0fba2237077ccd422ef5bcd496b7c94ade83a73a93be8a0997612690355881c"
     },
-    "skill:explainers:.agents/skills/promo": {
-      "commit": "314eb13b8307ed6c07c48bfab08f849f4c2263fd",
-      "hash": "sha256:438369259cfea155f114af69e1dc13d5806cf078d479375188112bc28e7fc2bd"
-    },
     "skill:gdp-ts:skills/gdp-ts": {
       "commit": "0b6ebeeec827b05210f3acfa4149a70dda9a0de5",
       "hash": "sha256:ed779c02323bc590f4e704f3c7729ec12a2d8d0194a51818adf106ef2f2c6f7a"
+    },
+    "skill:remotion:skills/remotion-best-practices": {
+      "commit": "7e541aa4d7361dfaca0780a565a47307eb7bdfbb",
+      "hash": "sha256:01dec50628c8d5e83f60507722afc3b05227482e91e02ff878efd23e75589c05"
     },
     "skill:vercel:skills/composition-patterns": {
       "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
@@ -128,12 +132,6 @@
       "locked_at": "2026-10-10T03:43:17Z",
       "ref": "main"
     },
-    "explainers": {
-      "commit": "314eb13b8307ed6c07c48bfab08f849f4c2263fd",
-      "git": "https://github.com/h14h/explainers",
-      "locked_at": "2026-10-10T21:22:36Z",
-      "ref": "master"
-    },
     "fast-jev-compaction": {
       "commit": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
       "git": "https://github.com/tamaratran/fast-jev-compaction",
@@ -147,9 +145,9 @@
       "ref": "main"
     },
     "mine": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
       "git": "https://github.com/lyddonb/agent-kit",
-      "locked_at": "2026-10-12T00:38:55Z",
+      "locked_at": "2026-11-15T01:26:24Z",
       "ref": "main"
     },
     "obsidian": {
@@ -174,6 +172,12 @@
       "commit": "ccb5507cec1546dc88135c1139c811e6c59115ba",
       "git": "https://github.com/cursor/plugins",
       "locked_at": "2026-10-11T19:15:15Z",
+      "ref": "main"
+    },
+    "remotion": {
+      "commit": "7e541aa4d7361dfaca0780a565a47307eb7bdfbb",
+      "git": "https://github.com/remotion-dev/skills",
+      "locked_at": "2026-11-15T00:59:29Z",
       "ref": "main"
     },
     "superpowers": {

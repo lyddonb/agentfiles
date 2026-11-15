@@ -53,11 +53,10 @@ Restart running agents afterwards so they pick up new skills. `sync` ends with a
 | `builder` | shipping code | **beau-mode** (bstack playbooks + principles, always on), model roles, PR review agents, feature-dev, security guidance, webapp testing, React/Next.js and web design guidelines, gdp-ts |
 | `eng-lead` | leading an eng org | design reviews, interview kits, Word/PDF/PowerPoint/Excel skills, doc co-authoring, internal comms, writing guidelines |
 | `knowledge` | Obsidian / research | Obsidian Markdown, Bases, Canvas, CLI, defuddle, YouTube transcripts |
-| `beau` | your laptop | `builder` + `eng-lead` + `knowledge` + fast-jev-compaction (Claude Code) |
+| `beau` | your laptop | `builder` + `eng-lead` + `knowledge` + `video` + fast-jev-compaction (Claude Code) |
 | `example-webapp` | a project | `builder` + Playwright MCP, scoped to one repo |
 | `superpowers` (add-on) | an alternative workflow | obra/superpowers instead of beau-mode; don't combine the two |
-
-All three personas also get `promo` (explainer videos).
+| `video` (add-on) | explainer videos | agent-kit's `explainer-video` + Remotion's skill; `beau` includes it |
 
 Why each item is there, setup notes, and context cost: **[docs/PERSONAS.md](docs/PERSONAS.md)**.
 

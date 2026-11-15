@@ -1,0 +1,19 @@
+description: Narrated explainer videos rendered with Remotion. Add it to any persona; beau includes it.
+extends: [base]
+
+# explainer-video (agent-kit's `video` plugin) writes the script, voiceover and animation and
+# checks the frames before delivering an MP4. It renders with Remotion, so this addon also
+# installs Remotion's router skill. It replaces h14h/explainers' `promo`, which it is adapted
+# from: two skills that both claim "make an explainer video" made agents pick one at random.
+#   agentfiles sync builder video
+plugins:
+  - mine:@video
+
+skills:
+  - ref: remotion:skills/remotion-best-practices
+    requires:
+      commands: [node]
+      note: >-
+        Voiceover needs ELEVENLABS_API_KEY or OPENROUTER_API_KEY in your env or the project's
+        .env, or a local TTS model. Remotion is free for individuals and companies of up to
+        3 people; larger companies need a license (https://www.remotion.dev/docs/license).
