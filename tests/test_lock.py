@@ -86,6 +86,43 @@ class LockPruneTests(Fixture):
         self.assertEqual(code, 0, out)
         self.assertEqual(self.lockfile.read_text(), before)
 
+    # `update` moves a source; every lock item from that source must move with it.
+    ITEM = "skill:extra:skills/epsilon"
+
+    def new_upstream_commit(self) -> str:
+        extra = self.tmp / "extra"
+        skill(extra / "skills", "epsilon", desc="Does a thing, v2. Use when testing.")
+        for args in (["add", "-A"], ["-c", "user.name=t", "-c", "user.email=t@e", "commit", "-q", "-m", "v2"]):
+            subprocess.run(["git", "-C", str(extra), *args], check=True)
+        return subprocess.run(["git", "-C", str(extra), "rev-parse", "HEAD"], check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    def test_update_moves_the_items_of_the_source_it_moves(self):
+        self.assertEqual(self.lock()[0], 0)
+        new = self.new_upstream_commit()
+        code, out = self.run_cli("update", "extra", "--yes")
+        self.assertEqual(code, 0, out)
+        lock = self.locked()
+        self.assertEqual(lock["sources"]["extra"]["commit"], new)
+        self.assertEqual(lock["items"][self.ITEM]["commit"], new,
+                         "the item must be pinned to the commit its source moved to")
+        before = self.lockfile.read_text()
+        code, out = self.lock("--frozen")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.lockfile.read_text(), before, "after update, the lock is already current")
+
+    def test_frozen_fails_when_an_item_lags_its_source(self):
+        self.assertEqual(self.lock()[0], 0)
+        new = self.new_upstream_commit()
+        lock = self.locked()
+        lock["sources"]["extra"]["commit"] = new  # what `update` used to leave: the source moved, the item didn't
+        self.lockfile.write_text(json.dumps(lock, indent=2) + "\n")
+        before = self.lockfile.read_text()
+        code, out = self.lock("--frozen")
+        self.assertNotEqual(code, 0, "--frozen must fail when an item is pinned to another commit than its source")
+        self.assertIn(self.ITEM, out)
+        self.assertEqual(self.lockfile.read_text(), before, "--frozen must never rewrite the lock")
+
 
 if __name__ == "__main__":
     unittest.main()

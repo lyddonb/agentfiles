@@ -157,6 +157,10 @@ def cmd_update(args) -> int:
         if confirm(f"  Accept {name} @ {new[:12]}?", args.yes):
             store.lock.set_source(src, new)
             changed += 1
+    if changed:
+        # Items carry their own commit and hash; move them with their source, or the lock says
+        # one commit for the source and installs another for its skills, plugins and commands.
+        _pin_items(cfg, store, sorted(cfg.profiles), frozen=False)
     store.lock.save()
     info(f"\n{changed} source(s) updated in agentfiles.lock." +
          (" Run `agentfiles sync` to apply." if changed else ""))
@@ -327,16 +331,21 @@ def cmd_doctor(args) -> int:
     return 1 if problems else 0
 
 
+def _pin_items(cfg: Config, store: Store, profiles: list[str], *, frozen: bool) -> set[str]:
+    """Pin each item the profiles use at its source's locked commit; return the items' keys."""
+    keys: set[str] = set()
+    for name in profiles:
+        plan = build_plan(cfg.resolve([name]), store, frozen=frozen)
+        verify_and_lock(plan, store, frozen=frozen)
+        keys |= set(plan.digests)
+    return keys
+
+
 def cmd_lock(args) -> int:
     """Pin every source used by the given profiles (default: all) without installing."""
     cfg = Config(repo_root())
     store = Store(cfg)
-    names = args.profiles or sorted(cfg.profiles)
-    keep_items: set[str] = set()
-    for name in names:
-        plan = build_plan(cfg.resolve([name]), store, frozen=args.frozen)
-        verify_and_lock(plan, store, frozen=args.frozen)
-        keep_items |= set(plan.digests)
+    keep_items = _pin_items(cfg, store, args.profiles or sorted(cfg.profiles), frozen=args.frozen)
     if not args.profiles:
         # Only a lock of every profile knows which items are unused; a subset must leave the rest
         # alone. Sources stay while sources.yaml defines them, used or not: `update` pins every
