@@ -186,6 +186,11 @@ class McpTests(unittest.TestCase):
         servers = cursor.get("mcpServers", cursor)
         self.assertEqual(servers["kb"]["args"], claude["args"])
         self.assertTrue(any("search_knowledge" in line for line in profile["instructions"]))
+        pages = next(line for line in profile["instructions"] if "Knowledge/Topics/" in line)
+        self.assertIn("not in the search index", pages)
+        self.assertIn("Agent memory & context engineering", pages)
+        self.assertNotIn("<topic label>", pages)
+        self.assertEqual(pages.count(";"), 8, "nine page names, as curator marks nine topics")
 
 
 class SyncTests(Fixture):
