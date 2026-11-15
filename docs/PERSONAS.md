@@ -46,6 +46,7 @@ Items that need more than `agentfiles sync`. Each declares this in its profile w
 | `podcast-studio` | base | Python 3.9+, `ffmpeg` (`brew install ffmpeg`) | `GEMINI_API_KEY` ([free key](https://aistudio.google.com/apikey)) in your env or `podcast/.env.local` |
 | `explainer-video` + `remotion-best-practices` | video (beau) | Node.js; Remotion downloads its own browser and ffmpeg | `ELEVENLABS_API_KEY` or `OPENROUTER_API_KEY` in your env or the project's `.env`, or local TTS. Companies of more than 3 people need a [Remotion license](https://www.remotion.dev/docs/license) |
 | `fast-jev-compaction` | beau | nothing | `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `TYPESAFE_API_KEY` in your shell profile (the key can go in the plugin's `apiKey` option instead) |
+| `kb` MCP server | beau | Node.js 22+; [pkb](https://github.com/lyddonb/pkb) built at `~/code/pkb` (`pnpm install && pnpm build`) | `curator kb index` run once, which writes `~/.local/share/curator/pkb/config.yaml` and the index. Cursor, Codex and OpenCode: merge the snippet (see [TARGETS.md](TARGETS.md)) |
 | `webapp-testing` | builder | Python Playwright in the project | nothing |
 
 ---
@@ -124,6 +125,7 @@ which agentfiles deliberately keeps immutable and hash-checked (see ROADMAP R4).
 | Item | From | Why | Notes |
 |---|---|---|---|
 | `fast-jev-compaction` plugin | tamaratran/fast-jev-compaction | Replaces Claude Code's lossy compaction summary: TypeSafe's Jev model scores every tool call and result, stale ones are dropped or truncated, and everything kept stays verbatim | Claude Code only. `allow: [hooks]` (an early-access function-hook module). Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `TYPESAFE_API_KEY`. **Sends the session transcript to TypeSafe** on each compaction, which is why it is in `beau` and not `base` |
+| `kb` MCP server | lyddonb/pkb, run on the config [curator](https://github.com/lyddonb/curator) renders | Agents search Beau's knowledge base (saved articles, papers and notes) before they design or answer, and read a topic's page. Two always-on instructions tell them to. Each search is logged, and curator imports it as an ungraded ask to grade | Read-only: four tools (`search_knowledge`, `get_note`, `find_related`, `list_sources`), no writes, no indexing. Runs through `sh -c` so its two paths come from `$HOME` and no home folder is in this repo. No API key is passed, so a search can't spend money; a query that names a file path routes to tree search and fails as a tool error. In `beau` and not `knowledge` because it only works on a machine with curator and pkb set up |
 
 ## example-webapp — project profile
 
