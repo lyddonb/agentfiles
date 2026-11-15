@@ -290,4 +290,8 @@ def verify_and_lock(plan: Plan, store: Store, *, frozen: bool) -> None:
                 "tampered with; delete ~/.cache/agentfiles/trees and retry.")
         if frozen and not locked:
             raise AgentfilesError(f"{key} is not in agentfiles.lock and --frozen was given")
+        if frozen and locked.get("commit") != commit:
+            raise AgentfilesError(
+                f"{key} is pinned to {str(locked.get('commit'))[:12]} but its source is locked at "
+                f"{commit[:12]} and --frozen was given; run `agentfiles lock` and commit the result")
         store.lock.set_item(key, commit, digest)
