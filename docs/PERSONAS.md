@@ -14,6 +14,7 @@ Everything listed was checked to exist upstream and installs cleanly with
 | working in an Obsidian vault | `knowledge` |
 | on your own laptop | `beau` (set `default_profiles: [beau]` in `local.yaml`) |
 | wanting obra/superpowers' workflow instead of beau-mode | `superpowers` (instead of `builder`) |
+| making explainer videos | `video` (with any persona; `beau` includes it) |
 
 Profiles combine freely: `agentfiles sync builder eng-lead`.
 
@@ -43,7 +44,7 @@ Items that need more than `agentfiles sync`. Each declares this in its profile w
 | Item | Profiles | Install | Configure |
 |---|---|---|---|
 | `podcast-studio` | base | Python 3.9+, `ffmpeg` (`brew install ffmpeg`) | `GEMINI_API_KEY` ([free key](https://aistudio.google.com/apikey)) in your env or `podcast/.env.local` |
-| `promo` | builder, eng-lead, knowledge | Node.js, `ffmpeg`; the agent may add rendering tools per video | `OPENROUTER_API_KEY` in your env or the project's `.env` (about $0.50 to $1.50 per video), or local TTS |
+| `explainer-video` + `remotion-best-practices` | video (beau) | Node.js; Remotion downloads its own browser and ffmpeg | `ELEVENLABS_API_KEY` or `OPENROUTER_API_KEY` in your env or the project's `.env`, or local TTS. Companies of more than 3 people need a [Remotion license](https://www.remotion.dev/docs/license) |
 | `fast-jev-compaction` | beau | nothing | `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `TYPESAFE_API_KEY` in your shell profile (the key can go in the plugin's `apiKey` option instead) |
 | `webapp-testing` | builder | Python Playwright in the project | nothing |
 
@@ -76,11 +77,22 @@ Items that need more than `agentfiles sync`. Each declares this in its profile w
 | `vercel-composition-patterns` | vercel-labs/agent-skills | Component composition and API design | |
 | `web-design-guidelines` | vercel-labs/agent-skills | UI, UX and accessibility review checklist | |
 | `gdp-ts` | rauchg/gdp-ts | Authorization and other preconditions as compile-time proofs in TypeScript ("Ghosts of Departed Proofs") | Only triggers in codebases that use, or are adopting, the `gdp-ts` library |
-| `promo` | h14h/explainers | Narrated explainer videos rendered from a generated JS animation to MP4 | In all three personas. Needs `OPENROUTER_API_KEY` (about $0.50 to $1.50 per video) or local TTS; the agent may install rendering tools |
 
 Superpowers used to be in `builder`. It is now the `superpowers` add-on profile: it and
 beau-mode are both routers (Superpowers' SessionStart hook makes the agent check its skills
 before every response), and running both makes agents follow two competing processes. Pick one.
+
+## video — explainer videos (add-on)
+
+| Item | From | Why |
+|---|---|---|
+| `video` plugin: `explainer-video` | agent-kit | Script, voiceover and animation for a narrated explainer, with still frames and the finished MP4 checked before delivery. Adapted from h14h/explainers' `promo` |
+| `remotion-best-practices` | remotion-dev/skills | The engine's own rules for setup, markup, voiceover, captions and rendering. One router skill that loads Remotion's other references on demand, instead of its 13 separate skills |
+
+`promo` used to be in all three personas. It left its rendering pipeline for the agent to
+invent each time, and once Remotion was installed both skills claimed "make an explainer
+video". `explainer-video` keeps promo's brief and styles and renders with Remotion. In Claude
+Code, agent-kit plugins come from its marketplace, so install `video@agent-kit` there too.
 
 ## eng-lead — running the engineering org
 
@@ -91,7 +103,6 @@ before every response), and running both makes agents follow two competing proce
 | `doc-coauthoring` | anthropics/skills | Structured co-writing of proposals, specs and decision docs |
 | `internal-comms` | anthropics/skills | Status reports, leadership updates, incident comms, FAQs |
 | `writing-guidelines` | vercel-labs/agent-skills | Clear, concise writing rules for docs and announcements |
-| `promo` | h14h/explainers | Explainer videos for launches, onboarding and all-hands (see builder) |
 
 Optional (commented in the profile): OpenAI's `linear` and `notion` plugins if you use those
 tools — they need account auth.
@@ -102,7 +113,6 @@ tools — they need account auth.
 |---|---|---|
 | `obsidian` plugin: `obsidian-markdown`, `obsidian-bases`, `json-canvas`, `obsidian-cli`, `knap`, `defuddle` | kepano/obsidian-skills (Steph Ango, Obsidian) | Agents write proper Obsidian flavored Markdown (wikilinks, callouts, properties), Bases and Canvas files, and can drive the Obsidian CLI; `defuddle` extracts clean article text for capture |
 | `doc-coauthoring` | anthropics/skills | Long-form drafting |
-| `promo` | h14h/explainers | Turn a topic you are researching into an explainer video (see builder) |
 
 Considered and left out: `pi-skills/youtube-transcript` needs `npm install` inside its folder,
 which agentfiles deliberately keeps immutable and hash-checked (see ROADMAP R4).

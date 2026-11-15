@@ -74,10 +74,12 @@ sources:
     git: https://github.com/tamaratran/fast-jev-compaction
     ref: main
 
-  # h14h's explainer-video skill (`promo`): scripted, narrated JS animations rendered to MP4.
-  explainers:
-    git: https://github.com/h14h/explainers
-    ref: master
+  # Remotion's agent skills: React-based programmatic video. The `video` addon installs only
+  # the remotion-best-practices router, which loads the other Remotion references on demand.
+  # The repo has no license file; install it from upstream, never copy it into agent-kit.
+  remotion:
+    git: https://github.com/remotion-dev/skills
+    ref: main
 
   # Ben Ogren's podcast-studio: source material -> multi-host episode via Gemini TTS.
   podcast-studio:

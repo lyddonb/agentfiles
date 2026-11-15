@@ -84,13 +84,13 @@
       "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
       "hash": "sha256:c0fba2237077ccd422ef5bcd496b7c94ade83a73a93be8a0997612690355881c"
     },
-    "skill:explainers:.agents/skills/promo": {
-      "commit": "314eb13b8307ed6c07c48bfab08f849f4c2263fd",
-      "hash": "sha256:438369259cfea155f114af69e1dc13d5806cf078d479375188112bc28e7fc2bd"
-    },
     "skill:gdp-ts:skills/gdp-ts": {
       "commit": "0b6ebeeec827b05210f3acfa4149a70dda9a0de5",
       "hash": "sha256:ed779c02323bc590f4e704f3c7729ec12a2d8d0194a51818adf106ef2f2c6f7a"
+    },
+    "skill:remotion:skills/remotion-best-practices": {
+      "commit": "7e541aa4d7361dfaca0780a565a47307eb7bdfbb",
+      "hash": "sha256:01dec50628c8d5e83f60507722afc3b05227482e91e02ff878efd23e75589c05"
     },
     "skill:vercel:skills/composition-patterns": {
       "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
@@ -127,12 +127,6 @@
       "git": "https://github.com/anthropics/skills",
       "locked_at": "2026-10-10T03:43:17Z",
       "ref": "main"
-    },
-    "explainers": {
-      "commit": "314eb13b8307ed6c07c48bfab08f849f4c2263fd",
-      "git": "https://github.com/h14h/explainers",
-      "locked_at": "2026-10-10T21:22:36Z",
-      "ref": "master"
     },
     "fast-jev-compaction": {
       "commit": "e3f262a7f4d42bd8dd32ced30d26176f7cb545b0",
@@ -174,6 +168,12 @@
       "commit": "ccb5507cec1546dc88135c1139c811e6c59115ba",
       "git": "https://github.com/cursor/plugins",
       "locked_at": "2026-10-11T19:15:15Z",
+      "ref": "main"
+    },
+    "remotion": {
+      "commit": "7e541aa4d7361dfaca0780a565a47307eb7bdfbb",
+      "git": "https://github.com/remotion-dev/skills",
+      "locked_at": "2026-11-15T00:59:29Z",
       "ref": "main"
     },
     "superpowers": {
