@@ -332,13 +332,20 @@ def cmd_lock(args) -> int:
     cfg = Config(repo_root())
     store = Store(cfg)
     names = args.profiles or sorted(cfg.profiles)
-    keep: set[str] = set()
+    keep_items: set[str] = set()
     for name in names:
         plan = build_plan(cfg.resolve([name]), store, frozen=args.frozen)
         verify_and_lock(plan, store, frozen=args.frozen)
-        keep |= set(plan.digests)
+        keep_items |= set(plan.digests)
     if not args.profiles:
-        store.lock.prune_items(keep)
+        # Only a lock of every profile knows which items are unused; a subset must leave the rest
+        # alone. Sources stay while sources.yaml defines them, used or not: `update` pins every
+        # defined source, and a watched one (pstack) keeps its last reviewed commit here.
+        stale = store.lock.stale(keep_items, set(cfg.sources))
+        if stale and args.frozen:
+            raise AgentfilesError("agentfiles.lock has entries no profile uses (run `agentfiles lock` "
+                                  "and commit the result):\n    " + "\n    ".join(stale))
+        store.lock.prune(keep_items, set(cfg.sources))
     changed = store.lock.dirty
     store.lock.save()
     info(f"agentfiles.lock {'updated' if changed else 'unchanged'}: "
