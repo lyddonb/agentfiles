@@ -1,8 +1,8 @@
 {
   "items": {
     "command:ledger": {
-      "commit": "d17a76716217e285dbbf0d4e3b7d267fc81e505f",
-      "hash": "sha256:db7d27cc1feac271114fd5c07af0fdcf77eab1d511aa318022529f6caed3e9dc"
+      "commit": "bc1cdab416a7a7f0140493d6569325af7a187701",
+      "hash": "sha256:98e54fdf209dc3cbd0ed6eec46e7d605ae227c5384253c69d8e7e3517b3a3fd1"
     },
     "plugin:anthropic-claude-code:plugins/feature-dev": {
       "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
@@ -111,9 +111,9 @@
   },
   "sources": {
     "agent-ledger": {
-      "commit": "d17a76716217e285dbbf0d4e3b7d267fc81e505f",
+      "commit": "bc1cdab416a7a7f0140493d6569325af7a187701",
       "git": "https://github.com/lyddonb/agent-ledger",
-      "locked_at": "2026-11-14T21:05:59Z",
+      "locked_at": "2026-11-15T00:56:24Z",
       "ref": "main"
     },
     "anthropic-claude-code": {
