@@ -37,12 +37,18 @@ class Lock:
             self.items[key] = new
             self.dirty = True
 
-    def prune_items(self, keep: set[str]) -> None:
-        # Only prune items whose source has been re-locked; keeps the file stable otherwise.
-        for key in list(self.items):
-            if key not in keep:
-                del self.items[key]
-                self.dirty = True
+    def stale(self, keep_items: set[str], keep_sources: set[str]) -> list[str]:
+        """Lock entries that nothing in the profiles uses any more."""
+        return ([f"source {n}" for n in sorted(self.sources) if n not in keep_sources]
+                + [k for k in sorted(self.items) if k not in keep_items])
+
+    def prune(self, keep_items: set[str], keep_sources: set[str]) -> None:
+        for name in [n for n in self.sources if n not in keep_sources]:
+            del self.sources[name]
+            self.dirty = True
+        for key in [k for k in self.items if k not in keep_items]:
+            del self.items[key]
+            self.dirty = True
 
     def save(self) -> None:
         if self.dirty:
