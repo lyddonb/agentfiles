@@ -26,3 +26,32 @@ plugins:
         Add `export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `export TYPESAFE_API_KEY=...` to
         your shell profile, then restart Claude Code. (The key can instead go in the plugin's
         apiKey option via /plugin, but the hooks flag must be an env var.)
+
+# Beau's knowledge base (curator P4-18): pkb's MCP server, read-only, on the index and the config
+# file that curator renders. So an agent gets the scope, the freshness labels and the four search
+# and read tools that `curator ask` uses, and each search is logged for curator to import and
+# grade. `sh -c` because the paths are this machine's: they come from $HOME, since agentfiles
+# passes `command`, `args` and `env` through as written. No API key is passed, so an agent's
+# search can't spend money; a query pkb routes to tree search (one that names a file path) fails
+# as a tool error instead.
+# Needs: node 22+, pkb built at ~/code/pkb (`pnpm build`), and `curator kb index` run once.
+mcp:
+  kb:
+    type: stdio
+    command: sh
+    args:
+      - -c
+      - >-
+        PKB_CONFIG_PATH="$HOME/.local/share/curator/pkb/config.yaml"
+        exec node "$HOME/code/pkb/packages/mcp-server/dist/index.js"
+
+instructions:
+  - >-
+    Beau's knowledge base is the `kb` MCP server (his saved articles, papers and notes). Before
+    designing something or answering a question about AI engineering, agents, evals or
+    engineering leadership, search it with `search_knowledge`, and say which notes you used with
+    their dates.
+  - >-
+    A topic's current state is on its topic page: read it with `get_note` on
+    `Knowledge/Topics/<topic label>.md`. A note marked older is past its half-life, so weigh it
+    less.

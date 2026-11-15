@@ -167,6 +167,27 @@ class McpTests(unittest.TestCase):
         self.assertEqual(oc["y"], {"type": "local", "command": ["npx", "z"]})
 
 
+    def test_the_beau_profile_kb_server_holds_no_home_path(self):
+        """The bundled `beau` profile's knowledge-base server (curator P4-18): a stdio server
+        every tool can take, whose paths come from $HOME so the public repo names no one's
+        home folder, and which is handed no API key."""
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        profile = yaml.safe_load((root / "profiles" / "beau.yaml").read_text())
+        kb = profile["mcp"]["kb"]
+        claude = to_claude_mcp("kb", kb)
+        self.assertEqual((claude["type"], claude["command"], claude["args"][0]), ("stdio", "sh", "-c"))
+        script = claude["args"][1]
+        self.assertIn('PKB_CONFIG_PATH="$HOME/', script)
+        self.assertIn('exec node "$HOME/', script)
+        self.assertNotIn("/Users/", json.dumps(kb))
+        self.assertNotIn("API_KEY", json.dumps(kb))
+        cursor = json.loads(mcp_snippets({"kb": kb})["cursor.json"])
+        servers = cursor.get("mcpServers", cursor)
+        self.assertEqual(servers["kb"]["args"], claude["args"])
+        self.assertTrue(any("search_knowledge" in line for line in profile["instructions"]))
+
+
 class SyncTests(Fixture):
     def test_sync_links_and_prunes(self):
         code, out = self.run_cli("sync", "more", "--targets", "codex")
