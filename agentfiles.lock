@@ -25,24 +25,28 @@
       "hash": "sha256:489e57941ff062f9c5257c043c6d36f824c91a6678d8e830fcb66692b8ee0f21"
     },
     "plugin:mine:@bstack": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
-      "hash": "sha256:025ff03b41e70e5504abb04dd99343b0ba5abcb8148602485f04d0cb67d01e5e"
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "hash": "sha256:cda8bc630ee821056358754deb449a6ae5bec45ea0fe5d42f1c3ca7a18240eff"
     },
     "plugin:mine:@eng-leadership": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
       "hash": "sha256:930fdb406a73ce26ab27f7a4315636c551598586f6ce6f4a599e5a680539628a"
     },
     "plugin:mine:@essentials": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
-      "hash": "sha256:896b714298fe3bfbc4fa4df24bdce5f65f0b0a1864c941d573acbbdec94701f6"
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "hash": "sha256:3306ab53428bce807b68f8c8878c4acba455c9eb578e610e2e47725c846288fc"
     },
     "plugin:mine:@principles": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
-      "hash": "sha256:376a1d7d3b3a226a47abdb625535e1f816263263c5661fe0e228613f398aa207"
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "hash": "sha256:8b501afa1a9f8bd65318e215ccf6b7d68c33ab09329c198238f839b180c92950"
     },
     "plugin:mine:@research-tools": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
       "hash": "sha256:09102b7d7a40d63c9c537709be8ce3b12ec23dd8038c77037e402980d9d9d2a0"
+    },
+    "plugin:mine:@video": {
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "hash": "sha256:6673153458e8612eea4cdd8e7ec2e009b077ccd146ce587127e0747465c928f3"
     },
     "plugin:obsidian:@obsidian": {
       "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
@@ -141,9 +145,9 @@
       "ref": "main"
     },
     "mine": {
-      "commit": "c48193206b45d3cfeeb64e4fb761ec3136d4514f",
+      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
       "git": "https://github.com/lyddonb/agent-kit",
-      "locked_at": "2026-10-12T00:38:55Z",
+      "locked_at": "2026-11-15T01:26:24Z",
       "ref": "main"
     },
     "obsidian": {
