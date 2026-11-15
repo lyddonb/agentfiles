@@ -19,8 +19,24 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pyyaml
-      - name: Unit tests (offline)
-        run: python3 -m unittest discover -s tests -v
+      # The recorder runs the suite as `python -m unittest discover -s tests` would and also writes
+      # per-test time and outcome for the quality books (lyddonb/quality). Pinned so a change to it
+      # reaches this repo only through a PR here.
+      - uses: actions/checkout@v4
+        with:
+          repository: lyddonb/agent-kit
+          ref: 2899067e8250775f570753f62892c73f8c32f2cc  # agent-kit main after #37 (qualitydirector 0.1.0)
+          path: .agent-kit
+          sparse-checkout: plugins/bstack/skills/qualitydirector/scripts
+      - name: Unit tests (offline), recorded
+        run: python3 .agent-kit/plugins/bstack/skills/qualitydirector/scripts/quality.py record tests --out "$RUNNER_TEMP/test-results.jsonl" --repo agentfiles
+      - name: Upload the test record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-agentfiles
+          path: ${{ runner.temp }}/test-results.jsonl
+          if-no-files-found: error
       - name: Config parses
         run: bin/agentfiles doctor || true   # tools are absent in CI; config errors still print
       - name: Lock covers every profile and hashes match upstream
