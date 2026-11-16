@@ -40,7 +40,7 @@ Maybe-someday ideas that don't earn a roadmap slot yet. Promote one to
 ## From "Steering AI Beyond Automation" (2026-11-15)
 
 Ideas from Narayanan and Unger's [essay](https://www.normaltech.ai/p/steering-ai-beyond-automation) on collaboration over full automation.
-Context and reasoning: [notes in agent-ledger](https://github.com/lyddonb/agent-ledger/blob/docs/steering-beyond-automation/docs/notes/steering-beyond-automation.md).
+Context and reasoning: [notes in agent-ledger](https://github.com/lyddonb/agent-ledger/blob/main/docs/notes/steering-beyond-automation.md).
 
 - **An `interactive` role in `roles.yaml`.** A fast, low-latency model per tool for attended
   work, which talks with the human while the `code` and `judgment` roles do deep work in the
