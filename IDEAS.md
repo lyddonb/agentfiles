@@ -36,3 +36,16 @@ Maybe-someday ideas that don't earn a roadmap slot yet. Promote one to
   `superpowers` for a week) and switch back.
 - **Show the active mode in each tool's status line** where the tool allows it.
 
+
+## From "Steering AI Beyond Automation" (2026-11-15)
+
+Ideas from Narayanan and Unger's [essay](https://www.normaltech.ai/p/steering-ai-beyond-automation) on collaboration over full automation.
+Context and reasoning: [notes in agent-ledger](https://github.com/lyddonb/agent-ledger/blob/main/docs/notes/steering-beyond-automation.md).
+
+- **An `interactive` role in `roles.yaml`.** A fast, low-latency model per tool for attended
+  work, which talks with the human while the `code` and `judgment` roles do deep work in the
+  background. agent-kit would name the role in beau-mode; agentfiles writes the model for it per
+  tool, and a missing entry still means "use the current model".
+- **A `steer` command or hint in the policy.** Once agent-ledger has `steer` entries, tell each
+  tool's global instructions where a human can post one mid-run, so steering works the same in
+  every tool.
