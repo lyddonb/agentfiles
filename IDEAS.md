@@ -49,3 +49,21 @@ Context and reasoning: [notes in agent-ledger](https://github.com/lyddonb/agent-
 - **A `steer` command or hint in the policy.** Once agent-ledger has `steer` entries, tell each
   tool's global instructions where a human can post one mid-run, so steering works the same in
   every tool.
+
+## From "intent over steps" (2026-11-16)
+
+Context and reasoning: [notes in agent-ledger](https://github.com/lyddonb/agent-ledger/blob/main/docs/notes/intent-over-steps.md).
+
+- **Instructions say outcomes, not steps.** A `doctor` check that flags profile `instructions:`
+  written as procedures ("first run X, then Y") instead of outcomes ("tests prove the
+  behavior, not the implementation"). The always-on block costs tokens in every session, so
+  it should hold only what changes the result.
+- **`agentfiles census`.** One list of everything this setup owns and runs: installed skills
+  and plugins (the lock), scheduled jobs and their owners, watched repos, books repos. It
+  fails when a scheduled job has no owner or two. The pieces exist today in `agentfiles.lock`,
+  `watched.csv` and `identity.scheduled_owner`, spread across repos.
+- **Policy gates as hooks.** Where a tool supports hooks (Claude Code today), generate hooks
+  from `~/.agents/policy.yaml` that stop a gated action (deploy, delete-data, spend,
+  outbound-message) until the ledger has a gate answer. Prose asks; a hook enforces. Install
+  only behind `allow: [hooks]`.
+
