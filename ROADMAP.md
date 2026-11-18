@@ -9,6 +9,11 @@ when to pick it up. Human-only work (accounts, verification on your machines, de
 
 Order within a priority is the suggested order.
 
+Plans that span the runtime's repos (agent-kit, agent-ledger, agentfiles and the private books)
+live in the private repo `lyddonb/agent-runtime` under `plans/`. Read the plan there before
+starting work it covers, and change it by pull request. Never keep a plan only in a chat, a
+hosted project doc or a local folder.
+
 ---
 
 ## P0
