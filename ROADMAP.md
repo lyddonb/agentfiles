@@ -140,3 +140,56 @@ so every agent can query team conventions while it works. See agent-kit `docs/KN
 **Why not done:** The knowledge base is its own follow-up project.
 **Prioritize when:** the KB has an MCP interface.
 
+---
+
+# Skill ops
+
+From Akshay's "[Our Claude skills and guidance, six months later](https://akshay.co/posts/our-claude-skills-and-guidance-six-months-later/)"
+(read 2026-11-19): measure skills in use, test their behavior, then prune. The plan and the
+map of all eight items across repos are in
+[agent-kit's roadmap](https://github.com/lyddonb/agent-kit/blob/main/ROADMAP.md), under Skill
+ops. agentfiles does the installing, so three items land here. Its lock is also the input to
+agent-kit R38, which books use for every installed skill, third-party ones included.
+
+## P1
+
+### R16. `doctor` checks that each tool loaded what the lock says
+**What:** After a sync, `agentfiles doctor` compares the skills each target tool reports as
+loaded with the skills the lock and the synced profiles say it should have. A skill missing
+from one tool, or loaded and not in the lock, is a problem line. This turns the checks R0 and
+R11 do by hand into one command, and it covers every skill, not only "one skill triggers".
+agent-kit's `verify-kit` skill (its R27) calls it.
+**Why not done:** How each tool reports its loaded skills is not confirmed outside Claude Code
+(R0). Settle that by prototype per tool.
+**Depends on:** R0 and H4 for Codex, Cursor, OpenCode and pi. The Claude Code half needs neither.
+**Done when:** the check fails for a skill whose YAML header is broken in a way agent-kit's
+`tools/validate.py` accepts, and passes after a clean sync of `base`.
+**Prioritize when:** with R0 or R11.
+
+### R17. Upstream skills pass the lint at `agentfiles update`
+**What:** `agentfiles update` runs agent-kit R39's check (a skill never names a script,
+subcommand or flag that doesn't exist) on the third-party skills a source update changes, and
+shows the failures beside the commits before the lock accepts them. The static checks in
+[IDEAS.md](IDEAS.md) under Quality and safety can join the same report. It reports and never
+blocks on its own.
+**Why not done:** The check does not exist yet.
+**Depends on:** agent-kit R39.
+**Done when:** an update to a fixture source whose new commit names a missing script prints the
+failure next to that commit, and the update can still be accepted.
+**Prioritize when:** agent-kit R39 has merged.
+
+## P2
+
+### R18. A skill retires from a profile first, and a new one starts on a trial
+**What:** The profile half of agent-kit R41. Its monthly prune brief ranks skills by use and
+cost and asks at most three retirement questions, third-party skills first, because they can
+be measured and dropped but not fixed. A yes lands here as a PR that removes the item from a
+profile. The source and the lock stay, so restoring it is one line. New third-party items
+enter with `trial: 14d` (promoted from [IDEAS.md](IDEAS.md)): when the trial ends, the brief
+shows the item's uses from agent-kit R38 and asks keep or drop.
+**Why not done:** No skill use is booked, so nothing can be retired on evidence.
+**Depends on:** agent-kit R38 and R41.
+**Done when:** on fixture rows, a proposed retirement produces a profile diff that
+`agentfiles plan` shows as only that removal, and an item past its trial is listed with its
+uses. Nothing is removed without Beau's answer.
+**Prioritize when:** agent-kit R38 has 60 days of rows.

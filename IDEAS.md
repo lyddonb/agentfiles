@@ -9,6 +9,7 @@ Maybe-someday ideas that don't earn a roadmap slot yet. Promote one to
 - **Auto-selected project profiles** — pick a profile from repo signals (`package.json` with
   `next` → web profile, `pyproject.toml` → Python profile).
 - **Time-boxed trials** — `trial: 14d` on an item; `sync` reminds you to keep or drop it.
+  Now part of ROADMAP R18.
 - **An employer profile and a "new hire" profile** — onboarding skills (repo map, deploy
   process, review norms). Belongs in a private repo, not here.
 
@@ -22,7 +23,8 @@ Maybe-someday ideas that don't earn a roadmap slot yet. Promote one to
 - **Static checks on install** — flag skills whose scripts use `curl | sh`, write outside the
   project, or read credential files; show it during `update`.
 - **Hidden-Unicode scan** of `SKILL.md` files (APM does this), to catch prompt-injection tricks.
-- **Per-skill usage stats** from Claude Code transcripts to find skills you never use.
+- **Per-skill usage stats** from Claude Code transcripts to find skills you never use. Now
+  agent-kit ROADMAP R38.
 
 ## Ergonomics
 - **Shell completion** for profile and source names.
