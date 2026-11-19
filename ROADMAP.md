@@ -169,9 +169,9 @@ agent-kit's `verify-kit` skill (its R27) calls it.
 ### R17. Upstream skills pass the lint at `agentfiles update`
 **What:** `agentfiles update` runs agent-kit R39's check (a skill never names a script,
 subcommand or flag that doesn't exist) on the third-party skills a source update changes, and
-shows the failures beside the commits before the lock accepts them. The static checks in
-[IDEAS.md](IDEAS.md) under Quality and safety can join the same report. It reports and never
-blocks on its own.
+shows the failures beside the commits before the lock accepts them. It also runs the static
+checks listed in [IDEAS.md](IDEAS.md) under Quality and safety. It reports and never blocks on
+its own.
 **Why not done:** The check does not exist yet.
 **Depends on:** agent-kit R39.
 **Done when:** an update to a fixture source whose new commit names a missing script prints the

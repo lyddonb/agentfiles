@@ -126,6 +126,6 @@ technical-writing and the Multi-phase plan playbook) is on agent-kit's
 **Why:** No profile names agent-kit's `cfo` plugin. agent-kit R38 books skill use keyed on
 `agentfiles.lock` and the profiles, so cfo's skills would not be counted. If they reach a tool some
 other way, R16's `doctor` check would report them as loaded and not in the lock.
-**Decide:** Is cfo outside every profile on purpose? If yes, R38 and R16 need a named exception
+**Decide:** Is cfo outside every profile on purpose? If yes, agent-kit R38 and R16 here need a named exception
 for skills installed another way. If no, add it to a profile.
 **Unblocks:** a complete count in agent-kit R38, and a quiet R16.
