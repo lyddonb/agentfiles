@@ -17,13 +17,15 @@ Order within a priority is the suggested order.
 **What:** Run `agentfiles sync base` on a real machine and confirm each tool lists the skills,
 follows the symlinks, and that `{baseDir}`/relative script paths resolve. Fix anything that
 doesn't (e.g. switch a tool to copies instead of symlinks).
-**Progress:** Cursor no longer relies on `~/.agents/skills` for slash discovery. Sync installs
-Cursor skills into `~/.cursor/skills` (project: `.cursor/skills`). Remaining: confirm Codex,
-OpenCode and pi on real machines still pick up `~/.agents/skills`.
+**Progress:** Cursor no longer relies on `~/.agents/skills` for its channel. Sync installs
+**real copies** into `~/.cursor/skills` (project: `.cursor/skills`) so Sync Skills / Cloud
+works (symlinks do not). Local Agents Window `/` ignoring personal skills is a separate Cursor
+product issue. Remaining: confirm Codex, OpenCode and pi on real machines still pick up
+`~/.agents/skills`.
 **Why deferred:** The build sandbox only had the Claude Code CLI. Claude Code was tested end to
 end (global, project, prune, uninstall); the other tools' directory conventions come from their
 current docs.
-**Blocked by:** HUMAN_TASKS H4 (Cursor path done; other tools still need human verification).
+**Blocked by:** HUMAN_TASKS H4 (Cursor copies done; other tools still need human verification).
 
 ## P1
 
