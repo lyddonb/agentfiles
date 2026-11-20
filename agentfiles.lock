@@ -1,8 +1,8 @@
 {
   "items": {
     "command:ledger": {
-      "commit": "aceb335cdaaaba8c0a378c773de8247a1afbaf8c",
-      "hash": "sha256:de989738e035a8369f481c5bbc0dbab10c33050878ff5773fd4f0a6fdb63ddcd"
+      "commit": "af766d67367bf6ab081e86eafbca34d9f3174885",
+      "hash": "sha256:d243dad988989c243a67f7f13c960b506d72d2909322829de0cd681744abf194"
     },
     "plugin:anthropic-claude-code:plugins/feature-dev": {
       "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
@@ -25,27 +25,27 @@
       "hash": "sha256:489e57941ff062f9c5257c043c6d36f824c91a6678d8e830fcb66692b8ee0f21"
     },
     "plugin:mine:@bstack": {
-      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
-      "hash": "sha256:cda8bc630ee821056358754deb449a6ae5bec45ea0fe5d42f1c3ca7a18240eff"
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "hash": "sha256:f37b563b36323accb565b0ac8f00558adf8114810da227cccb259b143e27047b"
     },
     "plugin:mine:@eng-leadership": {
-      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
       "hash": "sha256:930fdb406a73ce26ab27f7a4315636c551598586f6ce6f4a599e5a680539628a"
     },
     "plugin:mine:@essentials": {
-      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
       "hash": "sha256:3306ab53428bce807b68f8c8878c4acba455c9eb578e610e2e47725c846288fc"
     },
     "plugin:mine:@principles": {
-      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
       "hash": "sha256:8b501afa1a9f8bd65318e215ccf6b7d68c33ab09329c198238f839b180c92950"
     },
     "plugin:mine:@research-tools": {
-      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
       "hash": "sha256:09102b7d7a40d63c9c537709be8ce3b12ec23dd8038c77037e402980d9d9d2a0"
     },
     "plugin:mine:@video": {
-      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
       "hash": "sha256:6673153458e8612eea4cdd8e7ec2e009b077ccd146ce587127e0747465c928f3"
     },
     "plugin:obsidian:@obsidian": {
@@ -115,10 +115,10 @@
   },
   "sources": {
     "agent-ledger": {
-      "commit": "aceb335cdaaaba8c0a378c773de8247a1afbaf8c",
+      "commit": "af766d67367bf6ab081e86eafbca34d9f3174885",
       "git": "https://github.com/lyddonb/agent-ledger",
-      "locked_at": "2026-11-15T03:32:12Z",
-      "ref": "v1.0.0"
+      "locked_at": "2026-11-20T02:52:38Z",
+      "ref": "v1.1.0"
     },
     "anthropic-claude-code": {
       "commit": "2301018b1f61073c501a8e7a4813ef48c239163b",
@@ -145,9 +145,9 @@
       "ref": "main"
     },
     "mine": {
-      "commit": "f374f86568c2f27d4e532d16221ecc4abda0755b",
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
       "git": "https://github.com/lyddonb/agent-kit",
-      "locked_at": "2026-11-15T01:26:24Z",
+      "locked_at": "2026-11-20T02:52:39Z",
       "ref": "main"
     },
     "obsidian": {
