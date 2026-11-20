@@ -8,12 +8,12 @@ the listed work. Do them roughly in order.
 | H1 | Publish agent-kit first (its HUMAN_TASKS H1/H2) | Done |
 | H2 | Create the agentfiles repo and lock `mine` | Done |
 | H3 | Install on your laptop and remove duplicate copies | Done |
-| H4 | Verify Codex, Cursor, OpenCode and pi pick up the skills | 🚧 **BLOCKER** for ROADMAP R0–R2 |
+| H4 | Verify Codex, Cursor, OpenCode and pi pick up the skills | Partially done — Cursor install path fixed (see below); still confirm Codex/OpenCode/pi on your machines |
 | H5 | Review the plugins that run code before trusting them | To do |
 | H6 | Merge the MCP snippets into Codex / Cursor / OpenCode | To do |
 | H7 | Keep employer content in its own repo | Done |
 | H8 | Merge agent-kit's bstack, then re-lock `mine` | Done |
-| H9 | Sync builder and check each tool loads beau-mode | To do |
+| H9 | Sync builder and check each tool loads beau-mode | Partially done — Cursor `/beau-mode` path fixed; still paste User Rule + confirm in each tool |
 | H10 | Confirm the model names in `roles:` | To do |
 | H11 | Review the pending pstack changes | To do |
 | H12 | Merge agent-kit's verification and planning branch, then re-lock `mine` | 🚧 **BLOCKER** for bstack 0.2.0 in your tools |
@@ -52,12 +52,17 @@ git commit -am "chore: lock agent-kit" && git push
      `agentfiles doctor` flags overlaps.
 4. `agentfiles plan`, read it, then `agentfiles sync`. Restart running agents.
 
-### H4. Verify the other tools — 🚧 BLOCKER for ROADMAP R0–R2
-**Why:** Only Claude Code was available where this was built.
-**Steps:** After H3, in each tool you use, ask it to list its skills (or check its skills UI) and
-confirm the `base` skills appear: `commit-message`, `handoff-notes`, `library-docs`,
-`skill-creator`. Then try one (e.g. "write a commit message for the staged changes"). Note
-anything missing in an issue; that becomes ROADMAP R0.
+### H4. Verify the other tools — Partially done (Cursor path fixed)
+**Why:** Only Claude Code was available where this was built. Field check on a Mac showed
+global sync wrote skills only to `~/.agents/skills`, while Cursor's `/` slash picker needs
+`~/.cursor/skills` (and Cloud Agents sync that root only).
+**Done in agentfiles:** Cursor is a first-class channel. `agentfiles sync` with `cursor` in
+`targets:` links skills into `~/.cursor/skills` (project: `.cursor/skills`), not into the
+shared dir for Cursor. See [docs/TARGETS.md](docs/TARGETS.md).
+**Still on you:** After pulling that fix and re-syncing, in each tool you use confirm the
+`base` skills appear (`commit-message`, `handoff-notes`, `library-docs`, `skill-creator`)
+and try one. In Cursor, type `/beau-mode` (or `/commit-message`) in a **new** Agent chat.
+Note anything still missing for Codex/OpenCode/pi — that remains ROADMAP R0.
 
 ### H5. Review the plugins that run code
 **Why:** Your judgment call on trust and cost. Three profile entries carry `allow:`:
@@ -82,13 +87,17 @@ repos and add its own private sources.
 
 ### H8. Merge agent-kit's bstack, then re-lock `mine` — Done
 
-### H9. Sync builder and check each tool loads beau-mode
-**Steps:**
-1. `agentfiles plan beau`, read it, then `agentfiles sync beau`.
+### H9. Sync builder and check each tool loads beau-mode — Partially done
+**Cursor slash path:** Fixed in agentfiles (skills install to `~/.cursor/skills`). No manual
+`ln -s ~/.agents/skills/... ~/.cursor/skills/...` workaround.
+**Steps (re-verify after pulling the fix):**
+1. Update your agentfiles checkout, then `agentfiles plan beau` and `agentfiles sync beau`
+   (or `agentfiles sync` with your default `beau` profile). Confirm
+   `ls ~/.cursor/skills/beau-mode/SKILL.md` resolves.
 2. Paste `~/.local/share/agentfiles/instructions/cursor-user-rule.md` into Cursor Settings > Rules >
-   User Rules.
-3. In Claude Code and Cursor, start a session and ask "which instructions about beau-mode did you
-   load, and where from?" Then try `/beau-mode` on a small real task.
+   User Rules (still required; auto-write is ROADMAP R12).
+3. In Claude Code and Cursor, start a **new** session and ask "which instructions about beau-mode
+   did you load, and where from?" Then try `/beau-mode` on a small real task.
 4. If you previously installed Superpowers yourself, uninstall that copy
    (`claude plugin uninstall superpowers@<marketplace>`); `builder` no longer includes it.
 This is ROADMAP R11.

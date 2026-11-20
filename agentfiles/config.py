@@ -40,7 +40,7 @@ class Item:
     path: str | None = None        # path inside the source repo
     entry: str | None = None       # marketplace entry name (plugins only)
     allow: tuple[str, ...] = ()
-    explode: bool = True           # also share a plugin's skills via ~/.agents/skills
+    explode: bool = True           # also share a plugin's skills via ~/.agents/skills / ~/.cursor/skills
     native: bool = True            # install natively in Claude Code when possible
     origin: str = ""               # profile that declared it
     requires: dict = field(default_factory=dict)  # {commands, env, note}: manual setup, checked on sync

@@ -14,13 +14,16 @@ Order within a priority is the suggested order.
 ## P0
 
 ### R0. Verify the shared directory in Codex, Cursor, OpenCode and pi
-**What:** Run `agentfiles sync base` on a real machine and confirm each tool lists the skills
-from `~/.agents/skills`, follows the symlinks, and that `{baseDir}`/relative script paths
-resolve. Fix anything that doesn't (e.g. switch a tool to copies instead of symlinks).
+**What:** Run `agentfiles sync base` on a real machine and confirm each tool lists the skills,
+follows the symlinks, and that `{baseDir}`/relative script paths resolve. Fix anything that
+doesn't (e.g. switch a tool to copies instead of symlinks).
+**Progress:** Cursor no longer relies on `~/.agents/skills` for slash discovery. Sync installs
+Cursor skills into `~/.cursor/skills` (project: `.cursor/skills`). Remaining: confirm Codex,
+OpenCode and pi on real machines still pick up `~/.agents/skills`.
 **Why deferred:** The build sandbox only had the Claude Code CLI. Claude Code was tested end to
 end (global, project, prune, uninstall); the other tools' directory conventions come from their
 current docs.
-**Blocked by:** HUMAN_TASKS H4.
+**Blocked by:** HUMAN_TASKS H4 (Cursor path done; other tools still need human verification).
 
 ## P1
 
