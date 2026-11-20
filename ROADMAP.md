@@ -167,16 +167,18 @@ agent-kit's `verify-kit` skill (its R27) calls it.
 **Prioritize when:** with R0 or R11.
 
 ### R17. Upstream skills pass the lint at `agentfiles update`
-**What:** `agentfiles update` runs agent-kit R39's check (a skill never names a script,
-subcommand or flag that doesn't exist) on the third-party skills a source update changes, and
+**What:** `agentfiles update` runs agent-kit's command check (`check_commands` in its
+`tools/validate.py`: a skill never names a script, subcommand or flag that doesn't exist) on the third-party skills a source update changes, and
 shows the failures beside the commits before the lock accepts them. It also runs the static
 checks listed in [IDEAS.md](IDEAS.md) under Quality and safety. It reports and never blocks on
 its own.
-**Why not done:** The check does not exist yet.
-**Depends on:** agent-kit R39.
+**Why not done:** The check shipped in agent-kit (its PR 61, was R39), but it only looks under
+agent-kit's own layout, `plugins/*/skills/*/scripts/`, and nothing here calls it. A third-party
+source lays its skills out differently.
+**Depends on:** nothing now.
 **Done when:** an update to a fixture source whose new commit names a missing script prints the
 failure next to that commit, and the update can still be accepted.
-**Prioritize when:** agent-kit R39 has merged.
+**Prioritize when:** now. The check it runs has merged.
 
 ## P2
 
