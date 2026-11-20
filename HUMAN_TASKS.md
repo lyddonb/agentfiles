@@ -17,6 +17,7 @@ the listed work. Do them roughly in order.
 | H10 | Confirm the model names in `roles:` | To do |
 | H11 | Review the pending pstack changes | To do |
 | H12 | Merge agent-kit's verification and planning branch, then re-lock `mine` | 🚧 **BLOCKER** for bstack 0.2.0 in your tools |
+| H13 | Decide whether the cfo plugin belongs in a profile | To do (before agent-kit R38 books rows) |
 
 ---
 
@@ -121,3 +122,10 @@ technical-writing and the Multi-phase plan playbook) is on agent-kit's
 3. `agentfiles sync beau`. Your `local.yaml` already points `mine` at `~/code/agent-runtime/agent-kit`, so with that
    checkout on the branch you can sync it before merging.
 
+### H13. Decide whether the cfo plugin belongs in a profile
+**Why:** No profile names agent-kit's `cfo` plugin. agent-kit R38 books skill use keyed on
+`agentfiles.lock` and the profiles, so cfo's skills would not be counted. If they reach a tool some
+other way, R16's `doctor` check would report them as loaded and not in the lock.
+**Decide:** Is cfo outside every profile on purpose? If yes, agent-kit R38 and R16 here need a named exception
+for skills installed another way. If no, add it to a profile.
+**Unblocks:** a complete count in agent-kit R38, and a quiet R16.
