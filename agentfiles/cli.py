@@ -215,9 +215,12 @@ def cmd_status(args) -> int:
         info(f"Nothing installed by agentfiles for {scope.label}.")
         return 0
     links = state.get("links") or {}
+    cursor_links = state.get("cursor_links") or {}
     info(f"Scope: {state.get('scope')}")
     info(f"Shared skills ({len(links)}): " + ", ".join(sorted(Path(d).name for d in links)))
-    broken = [d for d, s in links.items() if not Path(d).exists()]
+    info(f"Cursor skills ({len(cursor_links)}): "
+         + ", ".join(sorted(Path(d).name for d in cursor_links)))
+    broken = [d for d, s in {**links, **cursor_links}.items() if not Path(d).exists()]
     if broken:
         warn(f"broken links: {', '.join(broken)}")
     c = state.get("claude") or {}
@@ -296,6 +299,7 @@ def cmd_doctor(args) -> int:
             problems += 1
     home = Path.home()
     shared = home / ".agents" / "skills"
+    cursor_dir = home / ".cursor" / "skills"
     claude_dir = home / ".claude" / "skills"
     if shared.is_dir() and claude_dir.is_dir():
         dup = sorted({p.name for p in shared.iterdir()} & {p.name for p in claude_dir.iterdir()})
@@ -303,6 +307,15 @@ def cmd_doctor(args) -> int:
             warn(f"skills in both ~/.agents/skills and ~/.claude/skills (Cursor/OpenCode will see "
                  f"duplicates): {', '.join(dup)}")
             problems += 1
+    if shared.is_dir() and cursor_dir.is_dir():
+        # Expected when Codex/OpenCode/pi and Cursor are both targets: shared dir is for
+        # those tools, ~/.cursor/skills is Cursor's channel. Cursor also discovers
+        # ~/.agents/skills, so the same name can appear twice there. Not a doctor failure.
+        dup = sorted({p.name for p in shared.iterdir()} & {p.name for p in cursor_dir.iterdir()})
+        if dup:
+            shown = ", ".join(dup[:8]) + ("…" if len(dup) > 8 else "")
+            info(f"  note  {len(dup)} skill name(s) in both ~/.agents/skills and ~/.cursor/skills "
+                 f"(Cursor may list them twice when both tool sets are targets): {shown}")
     try:
         cfg = Config(repo_root())
         for name, prof in cfg.profiles.items():
@@ -318,16 +331,16 @@ def cmd_doctor(args) -> int:
         problems += 1
     # A moved checkout leaves symlinks that still look installed; only resolving them shows it.
     state = read_json(state_dir() / "state.json", default={}) or {}
-    links = list(state.get("links") or {})
-    links += list(((state.get("claude") or {}).get("generated_links") or {}).values())
-    broken = sorted(str(p) for p in links if not Path(p).exists())
+    link_dests = list(state.get("links") or {}) + list(state.get("cursor_links") or {})
+    link_dests += list(((state.get("claude") or {}).get("generated_links") or {}).values())
+    broken = sorted(str(p) for p in link_dests if not Path(p).exists())
     if broken:
         warn(f"{len(broken)} installed skill link(s) no longer resolve (a source checkout moved or "
              f"was deleted). Fix the source path, then run `agentfiles sync`:\n    "
              + "\n    ".join(broken))
         problems += 1
-    elif links:
-        info(f"  ok  {len(links)} installed skill links resolve")
+    elif link_dests:
+        info(f"  ok  {len(link_dests)} installed skill links resolve")
     return 1 if problems else 0
 
 

@@ -1,9 +1,13 @@
 """Turn a Plan into desired on-disk / in-tool state, diff it against the last sync, apply it.
 
 Channels:
-  shared dir   ~/.agents/skills (or <project>/.agents/skills). One copy of every skill,
-               read by Codex, Cursor, OpenCode and pi. Entries are symlinks into the
-               immutable source cache.
+  shared dir   ~/.agents/skills (or <project>/.agents/skills). One copy of every skill
+               for Codex, OpenCode and pi. Entries are symlinks into the immutable source
+               cache.
+  cursor       ~/.cursor/skills (or <project>/.cursor/skills). Cursor's first-class skills
+               root for the `/` slash picker and Cloud Agents skill sync. Cursor also
+               discovers ~/.agents/skills, so Cursor skills are NOT also written there
+               (same reason Claude Code skills are not linked into ~/.claude/skills).
   claude-code  Claude Code does not read ~/.agents/skills, and linking skills into
                ~/.claude/skills would duplicate them in Cursor/OpenCode (which read both).
                So agentfiles generates ONE local marketplace ("agentfiles-local") holding:
@@ -33,7 +37,8 @@ from .resolve import Plan, Skill
 from .util import (AgentfilesError, data_dir, info, ok, read_json, removed, run, same, short,
                    state_dir, step, warn, write_json)
 
-SHARED_DIR_TARGETS = {"codex", "cursor", "opencode", "pi"}
+# Codex / OpenCode / pi. Cursor has its own channel (see cursor_skills_dir).
+SHARED_DIR_TARGETS = {"codex", "opencode", "pi"}
 GEN_MARKETPLACE = "agentfiles-local"
 GEN_PLUGIN = "agentfiles"
 SNIPPET_GONE = {
@@ -53,6 +58,11 @@ class Scope:
     @property
     def shared_skills_dir(self) -> Path:
         return (self.project / ".agents" / "skills") if self.project else Path.home() / ".agents" / "skills"
+
+    @property
+    def cursor_skills_dir(self) -> Path:
+        """Cursor's user/project skills root (slash menu + Cloud Agents sync)."""
+        return (self.project / ".cursor" / "skills") if self.project else Path.home() / ".cursor" / "skills"
 
     @property
     def generated_dir(self) -> Path:
@@ -82,6 +92,7 @@ class Scope:
 @dataclass
 class Desired:
     shared_links: dict[str, str] = field(default_factory=dict)   # dest -> src
+    cursor_links: dict[str, str] = field(default_factory=dict)   # dest -> src (~/.cursor/skills)
     claude_links: dict[str, str] = field(default_factory=dict)   # skill name -> src (agentfiles plugin)
     claude_native: dict[str, dict] = field(default_factory=dict) # plugin name -> {root, entry, skills, ref}
     claude_mcp: dict[str, dict] = field(default_factory=dict)
@@ -108,21 +119,33 @@ def _goes_to(item, tools: set[str]) -> bool:
     return item.targets is None or bool(set(item.targets) & tools)
 
 
+def _collect_skills(plan: Plan, tools: set[str], channel: str) -> dict[str, Skill]:
+    """Skills and exploded plugin skills that install into any of `tools`."""
+    bucket: dict[str, Skill] = {}
+    for s in plan.skills:
+        if _goes_to(s.item, tools):
+            _add_unique(bucket, s, channel)
+    for p in plan.plugins:
+        if p.item.explode and _goes_to(p.item, tools):
+            for s in p.skills:
+                _add_unique(bucket, s, channel)
+    return bucket
+
+
 def desired_state(plan: Plan, scope: Scope) -> Desired:
     d = Desired()
     targets = set(plan.resolved.targets)
     shared_tools = targets & SHARED_DIR_TARGETS
 
     if shared_tools:
-        shared: dict[str, Skill] = {}
-        for s in plan.skills:
-            if _goes_to(s.item, shared_tools):
-                _add_unique(shared, s, short(scope.shared_skills_dir))
-        for p in plan.plugins:
-            if p.item.explode and _goes_to(p.item, shared_tools):
-                for s in p.skills:
-                    _add_unique(shared, s, short(scope.shared_skills_dir))
+        shared = _collect_skills(plan, shared_tools, short(scope.shared_skills_dir))
         d.shared_links = {str(scope.shared_skills_dir / n): str(s.path) for n, s in sorted(shared.items())}
+
+    if "cursor" in targets:
+        # Cursor-only channel: do not also write these into ~/.agents/skills (Cursor reads
+        # both roots; dual install would show each skill twice in `/`).
+        cursor = _collect_skills(plan, {"cursor"}, short(scope.cursor_skills_dir))
+        d.cursor_links = {str(scope.cursor_skills_dir / n): str(s.path) for n, s in sorted(cursor.items())}
 
     if "claude-code" in targets:
         gen: dict[str, Skill] = {}
@@ -295,6 +318,13 @@ def _skip_globally_installed(d: Desired) -> None:
     for dest, src in list(d.shared_links.items()):
         if g_shared.get(Path(dest).name) == src:
             del d.shared_links[dest]
+            skipped += 1
+    # Cursor's channel is separate from the shared dir: only skip when the same skill was
+    # already linked under ~/.cursor/skills (not when it only exists in ~/.agents/skills).
+    g_cursor = {Path(dest).name: src for dest, src in (g.get("cursor_links") or {}).items()}
+    for dest, src in list(d.cursor_links.items()):
+        if g_cursor.get(Path(dest).name) == src:
+            del d.cursor_links[dest]
             skipped += 1
     gc = g.get("claude") or {}
     for name, src in list(d.claude_links.items()):
@@ -545,6 +575,12 @@ class Applier:
         step(f"Shared skills directory {short(self.scope.shared_skills_dir)} "
              f"({', '.join(sorted(set(targets) & SHARED_DIR_TARGETS)) or 'no targets'})")
         self.new["links"] = self._sync_links(d.shared_links, self.old.get("links") or {}, "skill")
+
+        cursor_targets = "cursor" if "cursor" in targets or (self.old.get("cursor_links") or d.cursor_links) else ""
+        step(f"Cursor skills directory {short(self.scope.cursor_skills_dir)} "
+             f"({cursor_targets or 'no targets'})")
+        self.new["cursor_links"] = self._sync_links(
+            d.cursor_links, self.old.get("cursor_links") or {}, "cursor skill")
 
         old_claude = self.old.get("claude") or {}
         if "claude-code" in targets and not self.claude_bin and not self.dry:

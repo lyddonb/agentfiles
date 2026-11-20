@@ -314,6 +314,70 @@ class SyncTests(Fixture):
         self.assertTrue((proj / ".agents" / "skills" / "alpha").is_symlink())
         self.assertTrue((proj / ".agentfiles" / "state.json").exists())
 
+    def test_cursor_sync_installs_into_cursor_skills_not_shared(self):
+        """Cursor's `/` picker and Cloud Agents sync read ~/.cursor/skills, not only
+        ~/.agents/skills. Cursor skills must not also land in the shared dir (Cursor
+        discovers both roots and would list duplicates)."""
+        code, out = self.run_cli("sync", "base", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        cursor = self.home / ".cursor" / "skills"
+        shared = self.home / ".agents" / "skills"
+        self.assertEqual(sorted(p.name for p in cursor.iterdir()), ["alpha", "gamma"])
+        self.assertTrue((cursor / "alpha").is_symlink())
+        self.assertTrue((cursor / "alpha" / "SKILL.md").is_file())
+        self.assertFalse(shared.exists() or (shared.is_dir() and any(shared.iterdir())),
+                         "Cursor-only sync must not populate ~/.agents/skills")
+        code, out = self.run_cli("status")
+        self.assertEqual(code, 0, out)
+        self.assertIn("Cursor skills (2):", out)
+        self.assertIn("alpha", out)
+
+    def test_cursor_sync_updates_and_uninstall_removes(self):
+        self.run_cli("sync", "more", "--targets", "cursor")
+        cursor = self.home / ".cursor" / "skills"
+        self.assertEqual(sorted(p.name for p in cursor.iterdir()), ["alpha", "beta", "delta"])
+
+        code, out = self.run_cli("sync", "base", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(sorted(p.name for p in cursor.iterdir()), ["alpha", "gamma"])
+        self.assertFalse((cursor / "beta").exists())
+        self.assertFalse((cursor / "delta").exists())
+
+        code, out = self.run_cli("uninstall", "--yes")
+        self.assertEqual(code, 0, out)
+        self.assertFalse(cursor.is_dir() and any(cursor.iterdir()),
+                         "uninstall must remove every Cursor skill symlink it managed")
+        state = json.loads((self.home / ".local" / "state" / "agentfiles" / "state.json").read_text())
+        self.assertEqual(state.get("cursor_links") or {}, {})
+
+    def test_cursor_and_codex_use_separate_channels(self):
+        code, out = self.run_cli("sync", "base", "--targets", "cursor,codex")
+        self.assertEqual(code, 0, out)
+        cursor = self.home / ".cursor" / "skills"
+        shared = self.home / ".agents" / "skills"
+        self.assertEqual(sorted(p.name for p in cursor.iterdir()), ["alpha", "gamma"])
+        self.assertEqual(sorted(p.name for p in shared.iterdir()), ["alpha", "gamma"])
+        self.assertEqual(os.readlink(cursor / "alpha"), os.readlink(shared / "alpha"))
+
+    def test_cursor_project_skills_and_skip_global(self):
+        self.run_cli("sync", "base", "--targets", "cursor")
+        proj = self.tmp / "proj"
+        write(proj / ".agentfiles.yaml", "extends: [base]\ntargets: [cursor]\n")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        self.assertEqual(code, 0, out)
+        self.assertIn("skipped here because your global sync already installs them", out)
+        self.assertFalse((proj / ".cursor" / "skills").exists()
+                         or ((proj / ".cursor" / "skills").is_dir()
+                             and any((proj / ".cursor" / "skills").iterdir())))
+
+        # Global Codex-only does not satisfy project Cursor: different channel.
+        self.run_cli("uninstall", "--yes")
+        self.run_cli("sync", "base", "--targets", "codex")
+        code, out = self.run_cli("sync", "--project", str(proj))
+        self.assertEqual(code, 0, out)
+        self.assertTrue((proj / ".cursor" / "skills" / "alpha").is_symlink())
+        self.assertTrue((proj / ".cursor" / "skills" / "gamma").is_symlink())
+
     def test_collision_is_an_error(self):
         skill(self.up / "other", "alpha")
         write(self.repo / "profiles" / "clash.yaml", "skills: [up:skills/alpha, up:other/alpha]\n")

@@ -47,7 +47,7 @@ plugins:                        # plugins: native in Claude Code, skills everywh
   - anthropic-claude-code:plugins/feature-dev   # <source>:<path to a plugin folder>
   - ref: anthropic-claude-code:plugins/security-guidance
     allow: [hooks]                       # permit code-running components (see SECURITY.md)
-    explode: true                        # also share its skills via ~/.agents/skills (default true)
+    explode: true                        # also share its skills via tool skill dirs (default true)
     native: true                         # install natively in Claude Code when possible (default true)
     targets: [codex, cursor]             # only these tools (default: the profile's targets)
   - ref: podcast-studio:@podcast-studio
@@ -159,7 +159,8 @@ Put a `.agentfiles.yaml` (same keys as a profile) in a repo, then run
 `agentfiles sync --project` from it. Or name profiles explicitly:
 `agentfiles sync --project ~/src/app example-webapp`.
 
-Project installs go to `<project>/.agents/skills` and Claude Code's **local** scope (your
+Project installs go to `<project>/.agents/skills` (Codex/OpenCode/pi),
+`<project>/.cursor/skills` (Cursor), and Claude Code's **local** scope (your
 checkout only). Anything your last global sync already installed is skipped, because tools
 read both user and project locations and would show duplicates. The same goes for always-on
 text: a project leaves out the mode and instructions your global sync actually wrote for Claude

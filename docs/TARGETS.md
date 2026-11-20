@@ -7,16 +7,29 @@ with `--project DIR` the same things happen under `DIR/`.
 |---|---|---|---|
 | Claude Code | via the generated `agentfiles-local` marketplace | **native** (hooks, agents, commands, MCP) when the plugin has a Claude manifest and its risky parts are allowed | `claude mcp add-json` (profile servers); plugin servers come with the plugin |
 | Codex | `~/.agents/skills` | skills only | snippet: `~/.local/share/agentfiles/mcp/codex.toml` |
-| Cursor | `~/.agents/skills` | skills only | snippet: `~/.local/share/agentfiles/mcp/cursor.json` |
+| Cursor | `~/.cursor/skills` (project: `.cursor/skills`) | skills only | snippet: `~/.local/share/agentfiles/mcp/cursor.json` |
 | OpenCode | `~/.agents/skills` | skills only | snippet: `~/.local/share/agentfiles/mcp/opencode.json` |
 | pi | `~/.agents/skills` | skills only | none (pi has no built-in MCP) |
 
 ## The shared skills directory
 
-`~/.agents/skills` (project: `.agents/skills`) is the cross-tool convention: Codex, Cursor,
-OpenCode and pi all read it. agentfiles puts **one symlink per skill** there, pointing into the
-pinned, immutable source tree in `~/.cache/agentfiles/trees/`. Plugins contribute their skills
-here too (set `explode: false` on a plugin to stop that).
+`~/.agents/skills` (project: `.agents/skills`) is the cross-tool convention for **Codex,
+OpenCode and pi**. agentfiles puts **one symlink per skill** there, pointing into the pinned,
+immutable source tree in `~/.cache/agentfiles/trees/`. Plugins contribute their skills here too
+(set `explode: false` on a plugin to stop that).
+
+## Cursor skills directory
+
+Cursor is a first-class target with its own skills root: `~/.cursor/skills` (project:
+`.cursor/skills`). That is the path Cursor's `/` slash picker and Cloud Agents skill sync
+reliably use. Official Cursor docs also list `~/.agents/skills`, but agentfiles does **not**
+also install Cursor skills there — Cursor discovers both roots, so dual install would list
+each skill twice (same reason agentfiles never writes `~/.claude/skills`).
+
+When your targets include both Cursor and Codex/OpenCode/pi, the same skill is linked into
+`~/.cursor/skills` *and* `~/.agents/skills` so each tool has its path. Cursor may then show
+those names twice; `agentfiles doctor` notes the overlap. Cursor-only targets get a clean
+`~/.cursor/skills` install with nothing under `~/.agents/skills`.
 
 agentfiles never writes to `~/.claude/skills`: Cursor and OpenCode read it *as well as*
 `~/.agents/skills`, so skills placed in both show up twice. `agentfiles doctor` warns if it
@@ -116,6 +129,7 @@ Safety rules:
 | `~/.local/share/agentfiles/mcp/` | MCP snippets |
 | `~/.local/state/agentfiles/state.json` | what the last global sync installed (used for pruning) |
 | `~/.claude/rules/agentfiles.md`, `~/.agents/roles.yaml` | always-on instructions for Claude Code; model roles |
+| `~/.cursor/skills/<name>` | Cursor skill symlinks (project: `.cursor/skills/<name>`) |
 | `~/.agents/policy.yaml` | the agent policy, when a profile sets `policy:` |
 | `~/.local/bin/<command>` | `commands:` shims (`bin_dir` in `local.yaml`); each runs a script from a cached tree |
 | `~/.local/share/agentfiles/instructions/` | paste-in instruction snippets (Cursor, sometimes OpenCode) |
