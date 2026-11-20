@@ -52,17 +52,19 @@ git commit -am "chore: lock agent-kit" && git push
      `agentfiles doctor` flags overlaps.
 4. `agentfiles plan`, read it, then `agentfiles sync`. Restart running agents.
 
-### H4. Verify the other tools — Partially done (Cursor path fixed)
+### H4. Verify the other tools — Partially done (Cursor channel + copies)
 **Why:** Only Claude Code was available where this was built. Field check on a Mac showed
-global sync wrote skills only to `~/.agents/skills`, while Cursor's `/` slash picker needs
-`~/.cursor/skills` (and Cloud Agents sync that root only).
+global sync wrote skills only to `~/.agents/skills`, while Cursor needs
+`~/.cursor/skills` (Customize + Cloud Agents Sync Skills). Symlinks in that root block
+Sync Skills; agentfiles now installs **real copies**.
 **Done in agentfiles:** Cursor is a first-class channel. `agentfiles sync` with `cursor` in
-`targets:` links skills into `~/.cursor/skills` (project: `.cursor/skills`), not into the
+`targets:` copies skills into `~/.cursor/skills` (project: `.cursor/skills`), not into the
 shared dir for Cursor. See [docs/TARGETS.md](docs/TARGETS.md).
-**Still on you:** After pulling that fix and re-syncing, in each tool you use confirm the
-`base` skills appear (`commit-message`, `handoff-notes`, `library-docs`, `skill-creator`)
-and try one. In Cursor, type `/beau-mode` (or `/commit-message`) in a **new** Agent chat.
-Note anything still missing for Codex/OpenCode/pi — that remains ROADMAP R0.
+**Still on you:** After pulling and re-syncing, confirm
+`~/.cursor/skills/<skill>/SKILL.md` is a real file (not a symlink), run Cursor **Sync Skills**
+if you use Cloud, and check Customize → Skills. **Do not expect** local Agents Window `/` to
+list personal skills yet — that remains a Cursor product gap even with copies. Also verify
+Codex/OpenCode/pi still pick up `~/.agents/skills` (ROADMAP R0).
 
 ### H5. Review the plugins that run code
 **Why:** Your judgment call on trust and cost. Three profile entries carry `allow:`:
@@ -88,17 +90,23 @@ repos and add its own private sources.
 ### H8. Merge agent-kit's bstack, then re-lock `mine` — Done
 
 ### H9. Sync builder and check each tool loads beau-mode — Partially done
-**Cursor slash path:** Fixed in agentfiles (skills install to `~/.cursor/skills`). No manual
-`ln -s ~/.agents/skills/... ~/.cursor/skills/...` workaround.
-**Steps (re-verify after pulling the fix):**
+**Cursor install path:** Fixed in agentfiles — skills are **copied** into `~/.cursor/skills`
+(Sync Skills / Cloud). No manual `ln -s` workaround. Re-sync after merge replaces any old
+symlinks with copies.
+**Local Agents `/`:** Still broken for personal skills (Customize may show `beau-mode`; Agents
+Window `/` may not). That is not fixed by copies — product feedback, not agentfiles.
+**Steps (re-verify after pulling the copies fix):**
 1. Update your agentfiles checkout, then `agentfiles plan beau` and `agentfiles sync beau`
    (or `agentfiles sync` with your default `beau` profile). Confirm
-   `ls ~/.cursor/skills/beau-mode/SKILL.md` resolves.
-2. Paste `~/.local/share/agentfiles/instructions/cursor-user-rule.md` into Cursor Settings > Rules >
+   `test -f ~/.cursor/skills/beau-mode/SKILL.md && ! test -L ~/.cursor/skills/beau-mode`
+   (real directory, not a symlink).
+2. In Cursor, run **Sync Skills** if you use Cloud Agents; confirm the skill is available on a
+   Cloud run. Locally, check Customize → Skills lists `beau-mode`.
+3. Paste `~/.local/share/agentfiles/instructions/cursor-user-rule.md` into Cursor Settings > Rules >
    User Rules (still required; auto-write is ROADMAP R12).
-3. In Claude Code and Cursor, start a **new** session and ask "which instructions about beau-mode
-   did you load, and where from?" Then try `/beau-mode` on a small real task.
-4. If you previously installed Superpowers yourself, uninstall that copy
+4. In Claude Code, try `/beau-mode` on a small real task. In Cursor Agents, `/beau-mode` may still
+   be missing locally — that is expected until Cursor fixes Agents slash discovery.
+5. If you previously installed Superpowers yourself, uninstall that copy
    (`claude plugin uninstall superpowers@<marketplace>`); `builder` no longer includes it.
 This is ROADMAP R11.
 

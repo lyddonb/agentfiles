@@ -16,11 +16,15 @@ safe. It makes what you install **explicit, pinned, and reviewable**.
 - **Gated code execution.** A plugin that ships hooks, MCP servers or a `bin/` folder is only
   installed natively in Claude Code when the profile lists them in `allow:`. Without it, you
   get the plugin's skills only.
-- **No clobbering.** agentfiles only removes symlinks and plugins it recorded installing, and
-  never overwrites a real file or a symlink it didn't create.
-- **Immutable trees.** Installed skills point into `~/.cache/agentfiles/trees/<source>/<commit>/`.
-  agentfiles never modifies those; if anything else writes into them (for example a skill
-  that runs `npm install` in its own folder), the next `sync` reports a hash mismatch.
+- **No clobbering.** agentfiles only removes symlinks, Cursor skill copies, and plugins it
+  recorded installing, and never overwrites a real file or a symlink it didn't create
+  (Cursor's `~/.cursor/skills` skips unmanaged directories; Claude's generated marketplace is
+  wholly owned and rewritten).
+- **Immutable trees.** Shared-dir skills are symlinks into
+  `~/.cache/agentfiles/trees/<source>/<commit>/`. Cursor and Claude Code get copies of those
+  trees. agentfiles never modifies the cache trees; if anything else writes into them (for
+  example a skill that runs `npm install` in its own folder), the next `sync` reports a hash
+  mismatch.
 
 ## What it does not do
 

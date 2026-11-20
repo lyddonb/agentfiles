@@ -21,15 +21,25 @@ immutable source tree in `~/.cache/agentfiles/trees/`. Plugins contribute their 
 ## Cursor skills directory
 
 Cursor is a first-class target with its own skills root: `~/.cursor/skills` (project:
-`.cursor/skills`). That is the path Cursor's `/` slash picker and Cloud Agents skill sync
-reliably use. Official Cursor docs also list `~/.agents/skills`, but agentfiles does **not**
-also install Cursor skills there — Cursor discovers both roots, so dual install would list
-each skill twice (same reason agentfiles never writes `~/.claude/skills`).
+`.cursor/skills`). agentfiles installs **one real directory copy per skill** there (not a
+symlink into the cache). Cursor **Sync Skills** for Cloud Agents needs durable trees;
+symlinks are refused or break that path. `sync` re-copies on every run (and replaces any
+older agentfiles symlinks), so edits in a local `path:` source appear after the next sync.
+`uninstall` removes only the copies recorded in state.
 
-When your targets include both Cursor and Codex/OpenCode/pi, the same skill is linked into
-`~/.cursor/skills` *and* `~/.agents/skills` so each tool has its path. Cursor may then show
-those names twice; `agentfiles doctor` notes the overlap. Cursor-only targets get a clean
-`~/.cursor/skills` install with nothing under `~/.agents/skills`.
+Official Cursor docs also list `~/.agents/skills`, but agentfiles does **not** also install
+Cursor skills there — Cursor discovers both roots, so dual install would list each skill
+twice (same reason agentfiles never writes `~/.claude/skills`).
+
+When your targets include both Cursor and Codex/OpenCode/pi, the same skill is **copied**
+into `~/.cursor/skills` and **symlinked** into `~/.agents/skills` so each tool has its path.
+Cursor may then show those names twice; `agentfiles doctor` notes the overlap. Cursor-only
+targets get a clean `~/.cursor/skills` install with nothing under `~/.agents/skills`.
+
+**Not fixed here:** local **Agents Window** `/` can still ignore personal skills under
+`~/.cursor/skills` even when **Customize → Skills** lists them. That is a Cursor product gap
+(separate from Sync Skills / Cloud). Real copies unblock Cloud sync; they do not make local
+Agents `/` pick up personal skills.
 
 agentfiles never writes to `~/.claude/skills`: Cursor and OpenCode read it *as well as*
 `~/.agents/skills`, so skills placed in both show up twice. `agentfiles doctor` warns if it
@@ -129,7 +139,7 @@ Safety rules:
 | `~/.local/share/agentfiles/mcp/` | MCP snippets |
 | `~/.local/state/agentfiles/state.json` | what the last global sync installed (used for pruning) |
 | `~/.claude/rules/agentfiles.md`, `~/.agents/roles.yaml` | always-on instructions for Claude Code; model roles |
-| `~/.cursor/skills/<name>` | Cursor skill symlinks (project: `.cursor/skills/<name>`) |
+| `~/.cursor/skills/<name>` | Cursor skill **copies** (project: `.cursor/skills/<name>`); not symlinks |
 | `~/.agents/policy.yaml` | the agent policy, when a profile sets `policy:` |
 | `~/.local/bin/<command>` | `commands:` shims (`bin_dir` in `local.yaml`); each runs a script from a cached tree |
 | `~/.local/share/agentfiles/instructions/` | paste-in instruction snippets (Cursor, sometimes OpenCode) |

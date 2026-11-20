@@ -11,9 +11,9 @@ agentfiles sync --project          # install this repo's .agentfiles.yaml into t
 agentfiles update                  # review upstream changes, then accept them into the lock
 ```
 
-- **One list, every tool.** Skills land in `~/.agents/skills` (Codex, OpenCode, pi), in
-  `~/.cursor/skills` for Cursor (slash menu + Cloud Agents sync), and in Claude Code through
-  a generated local plugin marketplace.
+- **One list, every tool.** Skills land in `~/.agents/skills` as symlinks (Codex, OpenCode, pi),
+  as real copies in `~/.cursor/skills` for Cursor (Sync Skills / Cloud Agents), and in Claude Code
+  through a generated local plugin marketplace.
 - **Pinned and reviewable.** `agentfiles.lock` records the exact commit and a content hash
   of everything installed. Updates show you the commits and files that changed first.
 - **Declarative.** `sync` makes each tool match the profile: it adds what's new, updates

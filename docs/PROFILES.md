@@ -28,7 +28,8 @@ sources:
 
 - Git sources are cloned once into `~/.cache/agentfiles/git/` and each locked commit is
   extracted into an immutable tree under `~/.cache/agentfiles/trees/<source>/<commit>/`.
-  Installed skills are symlinks into those trees.
+  Shared-dir installs (Codex, OpenCode, pi) are symlinks into those trees; Cursor and Claude
+  Code get copies (Cursor for Sync Skills / Cloud; Claude because plugin paths may not escape).
 - Changing a source's `git` or `ref` re-locks it on the next `sync` (or fails with `--frozen`).
 - Private repos work if `git clone` works for you (SSH keys or a credential helper).
 
