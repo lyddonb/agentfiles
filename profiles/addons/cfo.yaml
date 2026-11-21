@@ -7,12 +7,18 @@ extends: [base]
 # spending" and `estimate-run` answers "what will this cost"; both take their numbers from
 # `books.py`, which lives in `cfo-books`, so that skill comes along.
 #   agentfiles sync builder cfo
+# `targets` is spelled out on each skill because a machine can point the `mine` source away from
+# Claude Code (agent-kit's plugins then come from its own marketplace there). These three come
+# from no marketplace, so without it Claude Code would get none of them.
 skills:
   - ref: mine:plugins/cfo/skills/spend-snapshot
+    targets: [claude-code, codex, cursor, opencode, pi]
     requires:
       commands: [uv]
       note: >-
         Reads your private cost books. Set CFO_BOOKS to the books checkout in your shell
         profile, or the skill asks where they are.
-  - mine:plugins/cfo/skills/estimate-run
-  - mine:plugins/cfo/skills/cfo-books
+  - ref: mine:plugins/cfo/skills/estimate-run
+    targets: [claude-code, codex, cursor, opencode, pi]
+  - ref: mine:plugins/cfo/skills/cfo-books
+    targets: [claude-code, codex, cursor, opencode, pi]
