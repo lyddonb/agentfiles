@@ -15,6 +15,7 @@ Everything listed was checked to exist upstream and installs cleanly with
 | on your own laptop | `beau` (set `default_profiles: [beau]` in `local.yaml`) |
 | wanting obra/superpowers' workflow instead of beau-mode | `superpowers` (instead of `builder`) |
 | making explainer videos | `video` (with any persona; `beau` includes it) |
+| asking what you spend on AI and cloud, or what a run will cost | `cfo` (with any persona; `beau` includes it) |
 
 Profiles combine freely: `agentfiles sync builder eng-lead`.
 
@@ -82,6 +83,20 @@ Items that need more than `agentfiles sync`. Each declares this in its profile w
 Superpowers used to be in `builder`. It is now the `superpowers` add-on profile: it and
 beau-mode are both routers (Superpowers' SessionStart hook makes the agent check its skills
 before every response), and running both makes agents follow two competing processes. Pick one.
+
+## cfo — the CFO on demand (add-on)
+
+| What | From | Why |
+|---|---|---|
+| `spend-snapshot` | agent-kit's `cfo` plugin | Answers "what am I spending" by provider and project, against the budget, from your private cost books. |
+| `estimate-run` | agent-kit's `cfo` plugin | Answers "what will this cost" for a run, a charter or a project, in cash and API-equivalent terms. |
+| `cfo-books` | agent-kit's `cfo` plugin | Holds `books.py`, the script the other two take every number from, and checks the books. |
+
+The three are installed one by one, not as the plugin, so the weekly routine (`cfo-brief`) stays
+out. That routine runs from a scheduled task and a launchd job that read agent-kit directly, so
+it needs nothing installed. The add-on stands alone: drop `cfo` from a profile's `extends` and
+the next `sync` removes all three. The skills need `uv` (or any Python 3.10 or later) and your
+books: set `CFO_BOOKS` to the checkout, or the skill asks where it is.
 
 ## video — explainer videos (add-on)
 

@@ -92,6 +92,18 @@
       "commit": "0b6ebeeec827b05210f3acfa4149a70dda9a0de5",
       "hash": "sha256:ed779c02323bc590f4e704f3c7729ec12a2d8d0194a51818adf106ef2f2c6f7a"
     },
+    "skill:mine:plugins/cfo/skills/cfo-books": {
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "hash": "sha256:b21ff2aa848146a801e89c46613685f11b6f363cd38fba58e9768565ad504247"
+    },
+    "skill:mine:plugins/cfo/skills/estimate-run": {
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "hash": "sha256:71a6a9322143139cfaf97b590c7c0f919fc35be83553e529a0178587dfe72fc5"
+    },
+    "skill:mine:plugins/cfo/skills/spend-snapshot": {
+      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "hash": "sha256:5821d1a87461b4f0392cb9dfc76ebbcceb72ccb398a3fe9678685ee196a5b525"
+    },
     "skill:remotion:skills/remotion-best-practices": {
       "commit": "7e541aa4d7361dfaca0780a565a47307eb7bdfbb",
       "hash": "sha256:01dec50628c8d5e83f60507722afc3b05227482e91e02ff878efd23e75589c05"
