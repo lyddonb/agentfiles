@@ -1,0 +1,18 @@
+description: The CFO on demand - ask what you are spending or what a run will cost. Add it to any persona; beau includes it.
+extends: [base]
+
+# Three skills from agent-kit's `cfo` plugin, installed one by one so the weekly routine
+# (`cfo-brief`) stays out: that one runs from a scheduled task and the Mac's launchd job, which
+# read agent-kit directly and need nothing installed. `spend-snapshot` answers "what am I
+# spending" and `estimate-run` answers "what will this cost"; both take their numbers from
+# `books.py`, which lives in `cfo-books`, so that skill comes along.
+#   agentfiles sync builder cfo
+skills:
+  - ref: mine:plugins/cfo/skills/spend-snapshot
+    requires:
+      commands: [uv]
+      note: >-
+        Reads your private cost books. Set CFO_BOOKS to the books checkout in your shell
+        profile, or the skill asks where they are.
+  - mine:plugins/cfo/skills/estimate-run
+  - mine:plugins/cfo/skills/cfo-books

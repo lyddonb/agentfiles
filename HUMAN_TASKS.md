@@ -17,7 +17,7 @@ the listed work. Do them roughly in order.
 | H10 | Confirm the model names in `roles:` | To do |
 | H11 | Review the pending pstack changes | To do |
 | H12 | Merge agent-kit's verification and planning branch, then re-lock `mine` | 🚧 **BLOCKER** for bstack 0.2.0 in your tools |
-| H13 | Decide whether the cfo plugin belongs in a profile | To do (before agent-kit R38 books rows) |
+| H13 | Decide whether the cfo plugin belongs in a profile | **Done** (the `cfo` add-on) |
 
 ---
 
@@ -139,10 +139,15 @@ technical-writing and the Multi-phase plan playbook) is on agent-kit's
 3. `agentfiles sync beau`. Your `local.yaml` already points `mine` at `~/code/agent-runtime/agent-kit`, so with that
    checkout on the branch you can sync it before merging.
 
-### H13. Decide whether the cfo plugin belongs in a profile
-**Why:** No profile names agent-kit's `cfo` plugin. agent-kit R38 books skill use keyed on
-`agentfiles.lock` and the profiles, so cfo's skills would not be counted. If they reach a tool some
-other way, R16's `doctor` check would report them as loaded and not in the lock.
-**Decide:** Is cfo outside every profile on purpose? If yes, agent-kit R38 and R16 here need a named exception
-for skills installed another way. If no, add it to a profile.
-**Unblocks:** a complete count in agent-kit R38, and a quiet R16.
+### H13. Decide whether the cfo plugin belongs in a profile — Done
+**Answer (2026-11-21):** Part of it does. Beau's words: "I'd also like a CFO skill to call on
+demand. It does not need to be as robust as the ever running skill. And it should be able to be
+installed independently of other skills, etc if we don't want it." Asked how to package it, he
+chose an add-on of the existing skills. So `profiles/addons/cfo.yaml` installs `spend-snapshot`,
+`estimate-run` and `cfo-books` as three `skill:` items, and `beau` includes it. The weekly
+routine, `cfo-brief`, stays outside every profile on purpose: a scheduled task and the Mac's
+launchd job run it straight from agent-kit.
+**What follows:** agent-kit R38 books a use of the three with their lock item and commit, and a
+use of `cfo-brief`, if one ever shows up, with the plugin name and an empty version. R16's
+`doctor` needs no exception for the three. If `cfo-brief` reaches a tool some other way, R16
+should report it: nothing installs it.
