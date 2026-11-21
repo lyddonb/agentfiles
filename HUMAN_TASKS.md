@@ -16,7 +16,7 @@ the listed work. Do them roughly in order.
 | H9 | Sync builder and check each tool loads beau-mode | Partially done — Cursor `/beau-mode` path fixed; still paste User Rule + confirm in each tool |
 | H10 | Confirm the model names in `roles:` | To do |
 | H11 | Review the pending pstack changes | To do |
-| H12 | Merge agent-kit's verification and planning branch, then re-lock `mine` | 🚧 **BLOCKER** for bstack 0.2.0 in your tools |
+| H12 | Merge agent-kit's verification and planning branch, then re-lock `mine` | **Done** |
 | H13 | Decide whether the cfo plugin belongs in a profile | **Done** (the `cfo` add-on) |
 
 ---
@@ -129,15 +129,10 @@ principles, `reflect` and `unslop` in one agent-kit PR, and skip `/ketchup` unle
 agent-kit `docs/UPSTREAM.md`. Accept the new pstack commit into the lock after the agent-kit PR that
 acts on it lands.
 
-### H12. Merge agent-kit's verification and planning branch, then re-lock `mine` — 🚧 BLOCKER
-**Why:** bstack 0.2.0 (verification skills, why, teach, recall, architect, arena, swarm,
-technical-writing and the Multi-phase plan playbook) is on agent-kit's
-`feat/bstack-verification-and-planning` branch. The lock still pins `mine` at `c481932`.
-**Steps:**
-1. Merge that agent-kit branch.
-2. Here: `agentfiles update mine --yes`, commit `agentfiles.lock`, and merge.
-3. `agentfiles sync beau`. Your `local.yaml` already points `mine` at `~/code/agent-runtime/agent-kit`, so with that
-   checkout on the branch you can sync it before merging.
+### H12. Merge agent-kit's verification and planning branch, then re-lock `mine` — Done
+agent-kit merged the branch on 2026-10-11 (its pull requests 4 and 5), and the lock has pinned
+`mine` past it since. On 2026-11-21 the lock holds `mine` at `983d865` (bstack 0.20.0), which is
+46 commits behind agent-kit's main (bstack 0.28.0): `agentfiles update mine` picks up the rest.
 
 ### H13. Decide whether the cfo plugin belongs in a profile — Done
 **Answer (2026-11-21):** Part of it does. Beau's words: "I'd also like a CFO skill to call on
