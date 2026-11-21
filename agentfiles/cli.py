@@ -222,7 +222,7 @@ def cmd_status(args) -> int:
          + ", ".join(sorted(Path(d).name for d in cursor_links)))
     broken = [d for d, s in {**links, **cursor_links}.items() if not Path(d).exists()]
     if broken:
-        warn(f"broken links: {', '.join(broken)}")
+        warn(f"missing installed skills: {', '.join(broken)}")
     c = state.get("claude") or {}
     gen = c.get("generated_links") or {}
     info(f"Claude Code agentfiles plugin skills ({len(gen)}): " + ", ".join(sorted(gen)))

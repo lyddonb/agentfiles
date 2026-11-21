@@ -315,16 +315,20 @@ class SyncTests(Fixture):
         self.assertTrue((proj / ".agentfiles" / "state.json").exists())
 
     def test_cursor_sync_installs_into_cursor_skills_not_shared(self):
-        """Cursor's `/` picker and Cloud Agents sync read ~/.cursor/skills, not only
-        ~/.agents/skills. Cursor skills must not also land in the shared dir (Cursor
-        discovers both roots and would list duplicates)."""
+        """Cursor Sync Skills / Cloud need real trees under ~/.cursor/skills. Cursor skills
+        must not also land in the shared dir (Cursor discovers both roots and would list
+        duplicates)."""
         code, out = self.run_cli("sync", "base", "--targets", "cursor")
         self.assertEqual(code, 0, out)
         cursor = self.home / ".cursor" / "skills"
         shared = self.home / ".agents" / "skills"
         self.assertEqual(sorted(p.name for p in cursor.iterdir()), ["alpha", "gamma"])
-        self.assertTrue((cursor / "alpha").is_symlink())
-        self.assertTrue((cursor / "alpha" / "SKILL.md").is_file())
+        alpha = cursor / "alpha"
+        self.assertTrue(alpha.is_dir() and not alpha.is_symlink(),
+                        "Cursor skills must be real copies (Sync Skills rejects symlinks)")
+        self.assertTrue((alpha / "SKILL.md").is_file() and not (alpha / "SKILL.md").is_symlink())
+        links = [str(p) for p in cursor.rglob("*") if p.is_symlink()]
+        self.assertEqual(links, [], "no symlinks inside ~/.cursor/skills")
         self.assertFalse(shared.exists() or (shared.is_dir() and any(shared.iterdir())),
                          "Cursor-only sync must not populate ~/.agents/skills")
         code, out = self.run_cli("status")
@@ -336,6 +340,7 @@ class SyncTests(Fixture):
         self.run_cli("sync", "more", "--targets", "cursor")
         cursor = self.home / ".cursor" / "skills"
         self.assertEqual(sorted(p.name for p in cursor.iterdir()), ["alpha", "beta", "delta"])
+        self.assertTrue((cursor / "beta").is_dir() and not (cursor / "beta").is_symlink())
 
         code, out = self.run_cli("sync", "base", "--targets", "cursor")
         self.assertEqual(code, 0, out)
@@ -343,12 +348,55 @@ class SyncTests(Fixture):
         self.assertFalse((cursor / "beta").exists())
         self.assertFalse((cursor / "delta").exists())
 
+        (self.up / "skills" / "alpha" / "SKILL.md").write_text(
+            "---\nname: alpha\ndescription: Edited for Cursor copy. Use when testing.\n---\n")
+        code, out = self.run_cli("sync", "base", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        self.assertIn("Edited for Cursor copy", (cursor / "alpha" / "SKILL.md").read_text(),
+                      "a path source edit reaches the Cursor copy on the next sync")
+
         code, out = self.run_cli("uninstall", "--yes")
         self.assertEqual(code, 0, out)
         self.assertFalse(cursor.is_dir() and any(cursor.iterdir()),
-                         "uninstall must remove every Cursor skill symlink it managed")
+                         "uninstall must remove every Cursor skill copy it managed")
         state = json.loads((self.home / ".local" / "state" / "agentfiles" / "state.json").read_text())
         self.assertEqual(state.get("cursor_links") or {}, {})
+
+    def test_cursor_migrates_symlinks_to_copies(self):
+        """Older agentfiles (#24) linked into ~/.cursor/skills; re-sync must replace those
+        with durable copies so Sync Skills can pick them up."""
+        code, out = self.run_cli("sync", "base", "--targets", "codex")
+        self.assertEqual(code, 0, out)
+        shared_alpha = self.home / ".agents" / "skills" / "alpha"
+        src = Path(os.readlink(shared_alpha))
+        cursor = self.home / ".cursor" / "skills"
+        cursor.mkdir(parents=True)
+        (cursor / "alpha").symlink_to(src)
+        (cursor / "gamma").symlink_to(Path(os.readlink(self.home / ".agents" / "skills" / "gamma")))
+        state_path = self.home / ".local" / "state" / "agentfiles" / "state.json"
+        state = json.loads(state_path.read_text())
+        state["cursor_links"] = {
+            str(cursor / "alpha"): str(src),
+            str(cursor / "gamma"): os.readlink(self.home / ".agents" / "skills" / "gamma"),
+        }
+        state_path.write_text(json.dumps(state))
+        self.assertTrue((cursor / "alpha").is_symlink())
+
+        code, out = self.run_cli("sync", "base", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        self.assertTrue((cursor / "alpha").is_dir() and not (cursor / "alpha").is_symlink())
+        self.assertTrue((cursor / "gamma").is_dir() and not (cursor / "gamma").is_symlink())
+        self.assertEqual([str(p) for p in cursor.rglob("*") if p.is_symlink()], [])
+
+    def test_cursor_never_clobbers_unmanaged(self):
+        cursor = self.home / ".cursor" / "skills"
+        (cursor / "alpha").mkdir(parents=True)
+        (cursor / "alpha" / "SKILL.md").write_text("hand-installed\n")
+        code, out = self.run_cli("sync", "base", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        self.assertIn("not managed by agentfiles", out)
+        self.assertEqual((cursor / "alpha" / "SKILL.md").read_text(), "hand-installed\n")
+        self.assertTrue((cursor / "gamma").is_dir() and not (cursor / "gamma").is_symlink())
 
     def test_cursor_and_codex_use_separate_channels(self):
         code, out = self.run_cli("sync", "base", "--targets", "cursor,codex")
@@ -357,7 +405,10 @@ class SyncTests(Fixture):
         shared = self.home / ".agents" / "skills"
         self.assertEqual(sorted(p.name for p in cursor.iterdir()), ["alpha", "gamma"])
         self.assertEqual(sorted(p.name for p in shared.iterdir()), ["alpha", "gamma"])
-        self.assertEqual(os.readlink(cursor / "alpha"), os.readlink(shared / "alpha"))
+        self.assertTrue(shared.joinpath("alpha").is_symlink())
+        self.assertTrue(cursor.joinpath("alpha").is_dir() and not cursor.joinpath("alpha").is_symlink())
+        self.assertEqual((cursor / "alpha" / "SKILL.md").read_text(),
+                         (shared / "alpha" / "SKILL.md").read_text())
 
     def test_cursor_project_skills_and_skip_global(self):
         self.run_cli("sync", "base", "--targets", "cursor")
@@ -375,8 +426,10 @@ class SyncTests(Fixture):
         self.run_cli("sync", "base", "--targets", "codex")
         code, out = self.run_cli("sync", "--project", str(proj))
         self.assertEqual(code, 0, out)
-        self.assertTrue((proj / ".cursor" / "skills" / "alpha").is_symlink())
-        self.assertTrue((proj / ".cursor" / "skills" / "gamma").is_symlink())
+        alpha = proj / ".cursor" / "skills" / "alpha"
+        gamma = proj / ".cursor" / "skills" / "gamma"
+        self.assertTrue(alpha.is_dir() and not alpha.is_symlink())
+        self.assertTrue(gamma.is_dir() and not gamma.is_symlink())
 
     def test_collision_is_an_error(self):
         skill(self.up / "other", "alpha")

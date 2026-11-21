@@ -5,9 +5,12 @@ Channels:
                for Codex, OpenCode and pi. Entries are symlinks into the immutable source
                cache.
   cursor       ~/.cursor/skills (or <project>/.cursor/skills). Cursor's first-class skills
-               root for the `/` slash picker and Cloud Agents skill sync. Cursor also
-               discovers ~/.agents/skills, so Cursor skills are NOT also written there
-               (same reason Claude Code skills are not linked into ~/.claude/skills).
+               root. Entries are real directory copies (not symlinks): Cursor Sync Skills
+               for Cloud Agents refuses / breaks on symlink trees. Cursor also discovers
+               ~/.agents/skills, so Cursor skills are NOT also written there (same reason
+               Claude Code skills are not linked into ~/.claude/skills). Copies do not fix
+               local Agents Window `/` ignoring personal skills — that is a Cursor product
+               gap (Customize may list them while Agents `/` does not).
   claude-code  Claude Code does not read ~/.agents/skills, and linking skills into
                ~/.claude/skills would duplicate them in Cursor/OpenCode (which read both).
                So agentfiles generates ONE local marketplace ("agentfiles-local") holding:
@@ -92,7 +95,7 @@ class Scope:
 @dataclass
 class Desired:
     shared_links: dict[str, str] = field(default_factory=dict)   # dest -> src
-    cursor_links: dict[str, str] = field(default_factory=dict)   # dest -> src (~/.cursor/skills)
+    cursor_links: dict[str, str] = field(default_factory=dict)   # dest -> src (~/.cursor/skills copies)
     claude_links: dict[str, str] = field(default_factory=dict)   # skill name -> src (agentfiles plugin)
     claude_native: dict[str, dict] = field(default_factory=dict) # plugin name -> {root, entry, skills, ref}
     claude_mcp: dict[str, dict] = field(default_factory=dict)
@@ -320,7 +323,7 @@ def _skip_globally_installed(d: Desired) -> None:
             del d.shared_links[dest]
             skipped += 1
     # Cursor's channel is separate from the shared dir: only skip when the same skill was
-    # already linked under ~/.cursor/skills (not when it only exists in ~/.agents/skills).
+    # already installed under ~/.cursor/skills (not when it only exists in ~/.agents/skills).
     g_cursor = {Path(dest).name: src for dest, src in (g.get("cursor_links") or {}).items()}
     for dest, src in list(d.cursor_links.items()):
         if g_cursor.get(Path(dest).name) == src:
@@ -494,21 +497,36 @@ class Applier:
                 removed(f"{label}: {dp.name}")
         return kept
 
-    def _sync_copies(self, desired: dict[str, str], old: dict[str, str], label: str) -> None:
-        """Like _sync_links, but copies. Claude Code refuses plugin files that resolve outside
-        the plugin or marketplace directory, so a symlink into the cache never loads there.
-        Content is re-copied on every sync, so edits in a local `path:` source show up too."""
+    def _sync_copies(self, desired: dict[str, str], old: dict[str, str], label: str, *,
+                     clobber: bool = True) -> dict[str, str]:
+        """Like _sync_links, but durable directory copies (no symlinks inside the tree).
+
+        Used for Claude Code's marketplace (symlinks escape the plugin dir) and for Cursor's
+        ~/.cursor/skills (Sync Skills for Cloud Agents needs real trees). Content is
+        re-copied on every sync, so edits in a local `path:` source show up too.
+
+        With clobber=False (Cursor's user-visible skills dir), skip destinations that exist
+        and were not recorded in `old`, except a managed symlink pointing at the same src
+        (migration from an older agentfiles that linked instead of copying)."""
+        kept: dict[str, str] = {}
         for dest, src in desired.items():
             dp = Path(dest)
+            managed_symlink = dp.is_symlink() and os.readlink(dp) == src
+            if not clobber and dest not in old and dp.exists() and not managed_symlink:
+                warn(f"{short(dest)} exists and is not managed by agentfiles; skipping")
+                continue
             if old.get(dest) == src and dp.is_dir() and not dp.is_symlink():
                 same(f"{label}: {dp.name}")
             else:
-                ok(f"{label}: {dp.name}" + (" (updated)" if dest in old else ""))
+                ok(f"{label}: {dp.name}" + (" (updated)" if dest in old or managed_symlink else ""))
             self._do(lambda dp=dp, src=src: _copy_dir(Path(src), dp))
-        for dest in old:
-            if dest not in desired:
-                self._do(lambda dp=Path(dest): _remove_entry(dp))
-                removed(f"{label}: {Path(dest).name}")
+            kept[dest] = src
+        for dest, src in old.items():
+            if dest in desired:
+                continue
+            self._do(lambda dp=Path(dest): _remove_entry(dp))
+            removed(f"{label}: {Path(dest).name}")
+        return kept
 
     # -------------------------------------------------- generated Claude marketplace
     def _write_marketplace(self, d: Desired) -> tuple[Path, list[str], str]:
@@ -579,8 +597,10 @@ class Applier:
         cursor_targets = "cursor" if "cursor" in targets or (self.old.get("cursor_links") or d.cursor_links) else ""
         step(f"Cursor skills directory {short(self.scope.cursor_skills_dir)} "
              f"({cursor_targets or 'no targets'})")
-        self.new["cursor_links"] = self._sync_links(
-            d.cursor_links, self.old.get("cursor_links") or {}, "cursor skill")
+        # Real copies, not symlinks: Cursor Sync Skills for Cloud needs durable trees.
+        # clobber=False so a hand-installed ~/.cursor/skills/<name> is left alone.
+        self.new["cursor_links"] = self._sync_copies(
+            d.cursor_links, self.old.get("cursor_links") or {}, "cursor skill", clobber=False)
 
         old_claude = self.old.get("claude") or {}
         if "claude-code" in targets and not self.claude_bin and not self.dry:
