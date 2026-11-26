@@ -199,6 +199,11 @@ class Store:
         out = run(["git", "-C", str(m), "log", "--reverse", "--format=%H", f"{old}..{new}", "--", *paths]).stdout
         return out.split()
 
+    def files_at(self, name: str, commit: str) -> frozenset[str]:
+        """Every file path in the source at `commit`."""
+        m = self._mirror(self.config.sources[name])
+        return frozenset(l for l in run(["git", "-C", str(m), "ls-tree", "-r", "--name-only", commit]).stdout.splitlines() if l)
+
     def extract(self, name: str, commit: str, paths: list[str], dest: Path) -> Path:
         """Write `paths` of the source at `commit` under `dest`, for a read that the cache needn't keep.
         A path the commit doesn't have is left out."""

@@ -14,7 +14,7 @@ import yaml
 from . import __version__
 from .apm import emit_apm
 from .config import KNOWN_TARGETS, Config, Profile, parse_profile
-from .lint import Finding, changed_skills, introduced_by, lint_at, new_findings
+from .lint import Finding, changed_skills, introduced_by, key_counts, lint_at, new_findings
 from .policy import check_project_policy
 from .resolve import build_plan, verify_and_lock
 from .store import Store
@@ -138,16 +138,18 @@ def _lint_update(store: Store, name: str, old: str, new: str, paths: list[str]) 
         skills = changed_skills(new_root, store.changed_files(name, old, new, paths))
         if not skills:
             return {}
-        found = new_findings(store.tree_at(name, old), new_root, skills)
+        before = key_counts(lint_at(store.tree_at(name, old), skills))
+        found = new_findings(before, lint_at(new_root, skills))
         if not found:
             return {}
         commits = store.commits_touching(name, old, new, skills)
         if len(commits) > MAX_LINT_COMMITS:
             return {"": found}
         with tempfile.TemporaryDirectory(prefix="agentfiles-lint-") as tmp:
-            keys_at = [(sha, {f.key for f in lint_at(store.extract(name, sha, skills, Path(tmp) / sha), skills)})
-                       for sha in commits]
-        return introduced_by(found, keys_at)
+            counts_at = [(sha, key_counts(lint_at(store.extract(name, sha, skills, Path(tmp) / sha), skills,
+                                                  store.files_at(name, sha))))
+                         for sha in commits]
+        return introduced_by(found, counts_at, before)
     except Exception as e:
         warn(f"{name}: the skill lint could not run ({type(e).__name__}: {e}); review the update by hand")
         return {}
