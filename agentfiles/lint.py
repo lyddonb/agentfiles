@@ -10,8 +10,9 @@ from __future__ import annotations
 import ast
 import re
 import unicodedata
+from collections import Counter
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 
 @dataclass(frozen=True)
@@ -72,6 +73,7 @@ class CommandRef:
     script: str
     in_scripts_dir: bool
     args: list[str]
+    written: str = ""
 
 
 def _flag_literals(node: ast.AST) -> set[str]:
@@ -177,16 +179,28 @@ def command_refs(text: str, where: str) -> list[CommandRef]:
             run = all(w in RUNNERS or not w.isalpha() for w in runners) and (in_scripts_dir or "/" not in path)
             tail = QUOTED_RE.sub(" ARG ", command[m.end():nxt.start() if nxt else len(command)])
             tail = COMMAND_END_RE.split(" " + tail + " ", maxsplit=1)[0]
-            refs.append(CommandRef(where, no, m.group(1), in_scripts_dir, tail.split() if run else []))
+            refs.append(CommandRef(where, no, m.group(1), in_scripts_dir, tail.split() if run else [],
+                                   path[:-1] + m.group(1)))
     return refs
 
 
-def check_ref(ref: CommandRef, specs: dict[str, ScriptSpec | None]) -> list[Finding]:
+def names_another_file(written: str, files: frozenset[str]) -> bool:
+    """A path written out past `scripts/`, such as skills/other/scripts/run.py, that some file in the
+    source ends with. A bare scripts/run.py runs from the skill's own folder, so it never counts."""
+    if PurePosixPath(written).parts[:1] in ((), ("scripts",)):
+        return False
+    return any(f == written or f.endswith("/" + written) for f in files)
+
+
+def check_ref(ref: CommandRef, specs: dict[str, ScriptSpec | None],
+              files: frozenset[str] = frozenset()) -> list[Finding]:
     def found(message: str) -> list[Finding]:
         return [Finding(ref.path, ref.line, message)]
 
     if ref.script not in specs:
-        return found(f"names scripts/{ref.script}, which this skill does not ship") if ref.in_scripts_dir else []
+        if not ref.in_scripts_dir or names_another_file(ref.written, files):
+            return []
+        return found(f"names scripts/{ref.script}, which this skill does not ship")
     spec = specs[ref.script]
     if spec is None or spec.flags is None:
         return []
@@ -244,7 +258,8 @@ def _own_files(skill: Path, nested: list[Path]) -> list[Path]:
                   if p.is_file() and not p.is_symlink() and not any(n in p.parents for n in nested))
 
 
-def lint_skill(root: Path, skill: Path, nested: list[Path]) -> list[Finding]:
+def lint_skill(root: Path, skill: Path, nested: list[Path],
+               source_files: frozenset[str] = frozenset()) -> list[Finding]:
     files = _own_files(skill, nested)
     specs: dict[str, ScriptSpec | None] = {}
     out: list[Finding] = []
@@ -265,17 +280,20 @@ def lint_skill(root: Path, skill: Path, nested: list[Path]) -> list[Finding]:
         text = md.read_text(errors="replace")
         out += _hidden_chars(text, rel)
         for ref in command_refs(text, rel):
-            out += check_ref(ref, specs)
+            out += check_ref(ref, specs, source_files)
     return out
 
 
-def lint_tree(root: Path, skills: list[Path]) -> list[Finding]:
-    """Lint each skill directory. Findings are deduplicated and their paths are relative to `root`."""
+def lint_tree(root: Path, skills: list[Path], files: frozenset[str] | None = None) -> list[Finding]:
+    """Lint each skill directory. Findings are deduplicated and their paths are relative to `root`.
+    `files` is every file path in the source; by default, the files under `root`."""
+    if files is None:
+        files = frozenset(str(p.relative_to(root)) for p in root.rglob("*") if p.is_file())
     every = sorted({p.parent for p in root.rglob("SKILL.md")})
     seen, out = set(), []
     for skill in skills:
         nested = [s for s in every if skill in s.parents]
-        for f in lint_skill(root, skill, nested):
+        for f in lint_skill(root, skill, nested, files):
             if (f.path, f.line, f.message) not in seen:
                 seen.add((f.path, f.line, f.message))
                 out.append(f)
@@ -294,9 +312,9 @@ def skill_of(root: Path, rel: str) -> Path | None:
     return None
 
 
-def lint_at(root: Path, skills: list[str]) -> list[Finding]:
+def lint_at(root: Path, skills: list[str], files: frozenset[str] | None = None) -> list[Finding]:
     """Lint the skills, given relative to `root`, that exist there."""
-    return lint_tree(root, [root / s for s in skills if (root / s / "SKILL.md").is_file()])
+    return lint_tree(root, [root / s for s in skills if (root / s / "SKILL.md").is_file()], files)
 
 
 def changed_skills(root: Path, changed: list[str]) -> list[str]:
@@ -304,20 +322,35 @@ def changed_skills(root: Path, changed: list[str]) -> list[str]:
     return sorted({str(s.relative_to(root)) for s in (skill_of(root, rel) for rel in changed) if s})
 
 
-def new_findings(old_root: Path, new_root: Path, skills: list[str]) -> list[Finding]:
-    """Findings in `skills` at the new tree that the old tree didn't have."""
-    before = {f.key for f in lint_at(old_root, skills)}
-    return [f for f in lint_at(new_root, skills) if f.key not in before]
+def key_counts(findings: list[Finding]) -> Counter:
+    return Counter(f.key for f in findings)
 
 
-def introduced_by(findings: list[Finding], keys_at: list[tuple[str, set[tuple[str, str]]]]) -> dict[str, list[Finding]]:
-    """Group findings by the commit that brought each in for good. `keys_at` is each commit, oldest
-    first, with the finding keys its tree has. A finding no commit can account for goes under ""."""
+def new_findings(before: Counter, now: list[Finding]) -> list[Finding]:
+    """The findings in `now` past the count `before` has for their key. A key leaves the line out, so
+    a moved line is not news, but a second copy of a finding is."""
+    seen: Counter = Counter()
+    out = []
+    for f in now:
+        seen[f.key] += 1
+        if seen[f.key] > before[f.key]:
+            out.append(f)
+    return out
+
+
+def introduced_by(findings: list[Finding], counts_at: list[tuple[str, Counter]],
+                  before: Counter) -> dict[str, list[Finding]]:
+    """Group findings by the commit that brought each in for good. `counts_at` is each commit, oldest
+    first, with how many of each finding key its tree has; the nth new finding of a key is there once
+    the count passes `before` by n. A finding no commit can account for goes under ""."""
     out: dict[str, list[Finding]] = {}
+    rank: Counter = Counter()
     for f in findings:
+        rank[f.key] += 1
+        need = before[f.key] + rank[f.key]
         intro = ""
-        for sha, keys in keys_at:
-            if f.key not in keys:
+        for sha, counts in counts_at:
+            if counts[f.key] < need:
                 intro = ""
             elif not intro:
                 intro = sha
