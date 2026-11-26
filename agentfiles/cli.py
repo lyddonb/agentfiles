@@ -5,6 +5,7 @@ import argparse
 import os
 import shutil
 import sys
+import tempfile
 import textwrap
 from pathlib import Path
 
@@ -13,6 +14,7 @@ import yaml
 from . import __version__
 from .apm import emit_apm
 from .config import KNOWN_TARGETS, Config, Profile, parse_profile
+from .lint import Finding, changed_skills, introduced_by, lint_at, new_findings
 from .policy import check_project_policy
 from .resolve import build_plan, verify_and_lock
 from .store import Store
@@ -126,6 +128,52 @@ def _paths_used(cfg: Config, source: str) -> list[str]:
     return sorted(paths)
 
 
+MAX_LINT_COMMITS = 50
+
+
+def _lint_update(store: Store, name: str, old: str, new: str, paths: list[str]) -> dict[str, list[Finding]]:
+    """New lint findings in the skills this update changes, keyed by the commit that brought each in."""
+    try:
+        new_root = store.tree_at(name, new)
+        skills = changed_skills(new_root, store.changed_files(name, old, new, paths))
+        if not skills:
+            return {}
+        found = new_findings(store.tree_at(name, old), new_root, skills)
+        if not found:
+            return {}
+        commits = store.commits_touching(name, old, new, skills)
+        if len(commits) > MAX_LINT_COMMITS:
+            return {"": found}
+        with tempfile.TemporaryDirectory(prefix="agentfiles-lint-") as tmp:
+            keys_at = [(sha, {f.key for f in lint_at(store.extract(name, sha, skills, Path(tmp) / sha), skills)})
+                       for sha in commits]
+        return introduced_by(found, keys_at)
+    except Exception as e:
+        warn(f"{name}: the skill lint could not run ({type(e).__name__}: {e}); review the update by hand")
+        return {}
+
+
+def _print_commits(log: str, findings: dict[str, list[Finding]]) -> None:
+    """The commit log with each commit's new lint findings under it. Findings are reports, never a block."""
+    lines = (log or "(no commits touching these paths)").splitlines()
+    placed: set[str] = set()
+    for i, line in enumerate(lines):
+        short = line.split(" ", 1)[0]
+        hits = [(sha, fs) for sha, fs in findings.items() if sha and sha.startswith(short)]
+        if i < 40 or hits:
+            info("    " + line)
+        for sha, fs in hits:
+            placed.add(sha)
+            info("\n".join(f"      ! {f}" for f in fs))
+    rest = [f for sha, fs in findings.items() if sha not in placed for f in fs]
+    if rest:
+        info("    (not tied to one of these commits)")
+        info("\n".join(f"      ! {f}" for f in rest))
+    if findings:
+        n = sum(len(fs) for fs in findings.values())
+        info(f"  lint: {n} new finding(s) in the changed skills. They don't block the update.")
+
+
 def cmd_update(args) -> int:
     cfg = Config(repo_root())
     store = Store(cfg)
@@ -148,7 +196,7 @@ def cmd_update(args) -> int:
             log, stat = store.changes(name, old, new, paths)
             scope_note = "" if "." in paths or not paths else f" (limited to {', '.join(paths)})"
             info(f"  commits{scope_note}:")
-            info("\n".join("    " + l for l in (log or "(no commits touching these paths)").splitlines()[:40]))
+            _print_commits(log, _lint_update(store, name, old, new, paths))
             if stat:
                 info("  files:")
                 info("\n".join("    " + l for l in stat.splitlines()[-25:]))
