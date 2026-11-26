@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "goal": "A role entry like cli:cursor-agent:gpt-5.6-sol-high in a profile's roles: reaches ~/.agents/roles.yaml only when it can run; a malformed one fails agentfiles sync and plan with a clear error instead of reaching agents as a second_opinion.py exit 2 (ROADMAP R13).",
+  "changed": [
+    "parse_roles checks every role value that starts with cli: (alone or in a list) as cli:<agent>:<model>, with the agent in CLI_AGENTS (claude, cursor-agent) and a non-empty model. This covers profiles, project .agentfiles.yaml and local.yaml roles.",
+    "CLI_AGENTS copies second_opinion.py's ADAPTERS keys. A test reads them with ast from the agent-kit commit in agentfiles.lock, and a CI step after lock --frozen runs it with a missing cache treated as a failure.",
+    "README and docs/PROFILES.md show a cli: example; ROADMAP R13 is marked done."
+  ],
+  "claims": [
+    {
+      "claim": "sync and plan exit 2 on a malformed cli: entry, name the role, tool and entry, and write no roles.yaml; a good entry is written verbatim and parses in second_opinion.py.",
+      "verdict": "VERIFIED",
+      "check": "bin/agentfiles plan/sync on a scratch repo under a temporary HOME and XDG dirs, then second_opinion.Spec.parse on the written entry",
+      "commit": "85eff79",
+      "record": ".changes/2026-11-26-r13-cli-roles/sync.txt",
+      "remaining": "Not run through a live cursor-agent review: that is the script's job and its own tests'."
+    },
+    {
+      "claim": "Each bad shape fails (CLI: or leading-space prefix, cli:, cli:agent, cli::model, unknown agent, empty or blank model, each alone and as a list member) and good entries pass unchanged; with the check removed, 20 of these assertions fail.",
+      "verdict": "VERIFIED",
+      "check": "python3 -m unittest discover -s tests (108 tests, OK), and tests.test_roles with the check_cli_role call removed",
+      "commit": "85eff79",
+      "record": "tests/test_roles.py",
+      "remaining": "A string that only looks like cli: (clii:x, client:x) passes as a model name, as before."
+    },
+    {
+      "claim": "CLI_AGENTS equals ADAPTERS in the locked agent-kit (1a6aa9c), and the test fails when they differ or when the source is not cached under AGENTFILES_REQUIRE_AGENT_KIT.",
+      "verdict": "VERIFIED",
+      "check": "tests.test_roles.CliAgentsMatchAgentKitTest run as is, with codex added to CLI_AGENTS, and with an empty XDG_CACHE_HOME",
+      "commit": "85eff79",
+      "record": "tests/test_roles.py",
+      "remaining": "The new CI step is proven only once this PR's CI runs."
+    }
+  ],
+  "next": [
+    {
+      "item": "Decide whether Beau's own profiles get a cli: reviewers entry.",
+      "source": "inferred from agent-kit HUMAN_TASKS H17, which allowed a cli: judge for agent-kit R42 and R43 only",
+      "why_now": "agentfiles now accepts and checks the entry, so adding one is a one-line profile edit.",
+      "impact": "With it, every beau-mode review panel asks cursor-agent for a second model family by default; without it, only runs that pass --reviewer by hand get one."
+    },
+    {
+      "item": "Have agentfiles update flag a change to second_opinion.py's ADAPTERS when it lints an agent-kit update.",
+      "source": "inferred",
+      "why_now": "Not urgent: today drift shows up as a red CI step on the PR that bumps the lock.",
+      "impact": "The person reviewing an agent-kit update would see the new agent next to the commit that added it, instead of learning it from CI."
+    }
+  ],
+  "release": {
+    "note": "agentfiles sync and plan now reject a malformed cli:<agent>:<model> role entry, naming the role, tool and entry, so a bad cross-model reviewer never reaches roles.yaml."
+  }
+}

@@ -41,6 +41,8 @@ jobs:
         run: bin/agentfiles doctor || true   # tools are absent in CI; config errors still print
       - name: Lock covers every profile and hashes match upstream
         run: bin/agentfiles lock --frozen
+      - name: CLI role agents match the locked agent-kit's second_opinion.py
+        run: AGENTFILES_REQUIRE_AGENT_KIT=1 python3 -m unittest tests.test_roles.CliAgentsMatchAgentKitTest
 
   upstream-updates:
     if: github.event_name == 'schedule'
