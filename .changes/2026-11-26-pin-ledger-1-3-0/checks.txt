@@ -1,0 +1,14 @@
+$ agentfiles lock --frozen
+agentfiles.lock unchanged: 13 sources, 31 items
+
+$ make test
+Ran 108 tests in 74.242s
+
+OK
+
+# the pinned command, run from its locked tree (~/.cache/agentfiles/trees/agent-ledger/b64bbab.../ci/run_ledger.py), in a scratch repo
+$ ledger --version
+ledger 1.3.0
+$ ledger append ... --data '{"kind": "flag", "did_instead": "x", "suggested_fix": "y"}'
+ledger append: a flag needs data.target, a non-empty string (a flag has data.target, data.did_instead and data.suggested_fix)
+exit=2
