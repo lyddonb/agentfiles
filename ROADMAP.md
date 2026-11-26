@@ -153,7 +153,8 @@ From Akshay's "[Our Claude skills and guidance, six months later](https://akshay
 (read 2026-11-19): measure skills in use, test their behavior, then prune. The plan and the
 map of all eight items across repos are in
 [agent-kit's roadmap](https://github.com/lyddonb/agent-kit/blob/main/ROADMAP.md), under Skill
-ops. agentfiles does the installing, so three items land here. Its lock is also the input to
+ops. agentfiles does the installing, so three items land here. agent-kit's Knowledge factory
+section adds R19. Its lock is also the input to
 agent-kit R38, which books use for every installed skill, third-party ones included.
 
 ## P1
@@ -184,6 +185,22 @@ source lays its skills out differently.
 **Done when:** an update to a fixture source whose new commit names a missing script prints the
 failure next to that commit, and the update can still be accepted.
 **Prioritize when:** now. The check it runs has merged.
+
+### R19. A narrow profile and policy for a proposing agent
+**What:** A profile for an agent that runs on a schedule, reads the ledger and the books, and
+proposes skill and knowledge edits as pull requests. Its policy says what it may do: read the
+ledger and the books, write branches only (never `main`, never a merge), in agent-kit and its
+own repo. Its `instructions:` require a leak check on every pull request body, commit message
+and diff bound for a public repo, and a failure blocks the pull request. `agentfiles sync`
+installs it like any profile. From agent-kit's Knowledge factory section (flags raised by
+agents, read by one proposing agent) and Uber's
+"[How Uber Evals 1 Million Agent Skill Invocations a Month](https://www.uber.com/us/en/blog/optimizing-ubers-agent-skills/)"
+(read 2026-11-25), where a fix proposed from an agent's report is measured before it lands.
+**Why not done:** no agent reads flags yet.
+**Depends on:** agent-kit R45, and the agent that reads flags being built.
+**Done when:** `agentfiles plan` for the profile shows only the tools and gates its policy
+names, and a dry run that tries to push to `main` stops at the policy.
+**Prioritize when:** the agent that reads flags is being built.
 
 ## P2
 
