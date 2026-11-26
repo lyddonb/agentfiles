@@ -192,6 +192,23 @@ def parse_requires(raw, where: str) -> dict:
 
 
 ROLE_NAMES = ("code", "judgment", "explorer", "reviewers")
+CLI_AGENTS = ("claude", "cursor-agent")
+
+
+def check_cli_role(value: str, where: str) -> None:
+    """A `cli:<agent>:<model>` entry names another agent's CLI, which agent-kit's second_opinion.py
+    runs. CLI_AGENTS is a copy of that script's ADAPTERS keys; tests/test_roles.py keeps them equal."""
+    if not value.strip().lower().startswith("cli:"):
+        return
+    want = f"want cli:<agent>:<model> with agent one of {', '.join(CLI_AGENTS)}"
+    parts = value.split(":", 2)
+    if len(parts) != 3 or parts[0] != "cli":
+        raise AgentfilesError(f"{where}: bad CLI entry {value!r}: {want}")
+    agent, model = parts[1], parts[2]
+    if agent not in CLI_AGENTS:
+        raise AgentfilesError(f"{where}: unknown CLI agent {agent!r} in {value!r}: {want}")
+    if not model.strip():
+        raise AgentfilesError(f"{where}: CLI entry {value!r} has no model: {want}")
 
 
 def parse_roles(raw, where: str) -> dict:
@@ -221,6 +238,8 @@ def parse_roles(raw, where: str) -> dict:
                     raise AgentfilesError(f"{where}: roles.{role}.{tool}: list entries must be model names")
             elif not (isinstance(model, str) and model.strip()):
                 raise AgentfilesError(f"{where}: roles.{role}.{tool}: must be a model name, a list, or inherit")
+            for m in model if isinstance(model, list) else [model]:
+                check_cli_role(m, f"{where}: roles.{role}.{tool}")
         out[role] = dict(per_tool)
     return out
 
