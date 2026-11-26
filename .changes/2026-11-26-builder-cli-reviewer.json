@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "goal": "Add the cli: reviewers entry to Beau's builder profile, so Claude Code review panels include a second model family.",
+  "changed": [
+    "profiles/personas/builder.yaml: Claude Code reviewers are now [opus, sonnet, cli:cursor-agent:gpt-5.6-sol-high]; Cursor's panel is unchanged, since it already has two families.",
+    "The README's builder excerpt shows the new entry."
+  ],
+  "claims": [
+    {
+      "claim": "The beau profile resolves with the new entry, and plan would update ~/.agents/roles.yaml without error.",
+      "verdict": "VERIFIED",
+      "check": "bin/agentfiles plan beau (exit 0, '+ model roles: ~/.agents/roles.yaml (updated)'), Config.resolve(['beau']).roles['reviewers'], lock --frozen unchanged, unit tests OK",
+      "commit": "fd8493e",
+      "record": "https://github.com/lyddonb/agentfiles/pull/35",
+      "remaining": "roles.yaml is not rewritten until Beau runs agentfiles sync after merge; no live panel has run through cursor-agent from this profile yet."
+    }
+  ],
+  "next": [
+    {
+      "item": "Run agentfiles sync after merge so ~/.agents/roles.yaml carries the entry.",
+      "source": "inferred",
+      "why_now": "Skills read roles.yaml, not the profile; until sync runs nothing changes.",
+      "impact": "From then on every beau-mode review panel in Claude Code asks GPT-5.6 Sol High through cursor-agent as well, at one more CLI call per panel."
+    }
+  ],
+  "release": {
+    "note": "The builder profile's Claude Code review panel now includes GPT-5.6 Sol High through cursor-agent."
+  }
+}
