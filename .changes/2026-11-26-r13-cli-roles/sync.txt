@@ -1,0 +1,29 @@
+# Scratch repo under a temporary HOME, AGENTFILES_HOME and XDG dirs, at commit 85eff79.
+# profiles/bad.yaml:  roles: {reviewers: {codex: [inherit, cli:cursor-agnt:gpt-5.6-sol-high]}}
+# profiles/good.yaml: roles: {reviewers: {codex: [inherit, cli:cursor-agent:gpt-5.6-sol-high]}}
+
+$ agentfiles plan bad
+agentfiles: error: profile bad: roles.reviewers.codex: unknown CLI agent 'cursor-agnt' in 'cli:cursor-agnt:gpt-5.6-sol-high': want cli:<agent>:<model> with agent one of claude, cursor-agent
+exit 2
+
+$ agentfiles sync bad
+agentfiles: error: profile bad: roles.reviewers.codex: unknown CLI agent 'cursor-agnt' in 'cli:cursor-agnt:gpt-5.6-sol-high': want cli:<agent>:<model> with agent one of claude, cursor-agent
+exit 2
+$ ls ~/.agents
+ls: ~/.agents: No such file or directory
+
+$ agentfiles sync good     # bad.yaml moved out of profiles/ first
+  + model roles: ~/.agents/roles.yaml
+Done. Restart running agents to pick up changes.
+exit 0
+$ cat ~/.agents/roles.yaml
+roles:
+  reviewers:
+    codex:
+    - inherit
+    - cli:cursor-agent:gpt-5.6-sol-high
+version: 1
+
+# The consumer accepts what was written: second_opinion.py Spec.parse('cli:cursor-agent:gpt-5.6-sol-high')
+# parses and 'cursor-agent' is in ADAPTERS; --reviewer cli:cursor-agnt:x exits 2 with
+# "unknown agent 'cursor-agnt': want one of claude, cursor-agent".
