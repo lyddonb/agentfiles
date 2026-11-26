@@ -109,7 +109,7 @@ instructions:                     # optional extra always-on text
   - Prefer several small PRs to one large one.
 roles:                            # which model each subagent role uses, per tool
   judgment:  {claude-code: opus,   cursor: claude-opus-5-5-xhigh}
-  reviewers: {claude-code: [opus, sonnet], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
+  reviewers: {claude-code: [opus, sonnet, cli:cursor-agent:gpt-5.6-sol-high], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
 ```
 
 A role entry can also name another agent's CLI, which bstack's `second_opinion.py` runs for a

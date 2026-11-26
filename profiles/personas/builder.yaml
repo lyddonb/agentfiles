@@ -29,13 +29,14 @@ plugins:
 
 # Which model each subagent role uses, per tool (written to ~/.agents/roles.yaml).
 # Review panels get their value from model diversity, so `reviewers` lists two families
-# where the tool has them. Leave a tool out to use whatever model the session runs on.
+# where the tool has them. Claude Code gets GPT through agent-kit's second_opinion.py (a
+# cli: entry, checked at sync). Leave a tool out to use whatever model the session runs on.
 # Machine-specific overrides go in local.yaml under the same `roles:` key.
 roles:
   code:      {claude-code: sonnet, cursor: grok-4.7-xhigh-fast}
   judgment:  {claude-code: opus,   cursor: claude-opus-5-5-xhigh}
   explorer:  {claude-code: sonnet, cursor: grok-4.7-xhigh-fast}
-  reviewers: {claude-code: [opus, sonnet], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
+  reviewers: {claude-code: [opus, sonnet, cli:cursor-agent:gpt-5.6-sol-high], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
 
 # The agent policy (agent-ledger spec S2), written to ~/.agents/policy.yaml: which actions are
 # gates, run budgets, security and audit rules. `{}` takes the defaults: all ten gates, tier 2
