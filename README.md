@@ -112,6 +112,10 @@ roles:                            # which model each subagent role uses, per too
   reviewers: {claude-code: [opus, sonnet], cursor: [claude-opus-5-5-xhigh, grok-4.7-xhigh-fast]}
 ```
 
+A role entry can also name another agent's CLI, which bstack's `second_opinion.py` runs for a
+read-only review from a different model family, such as `cli:cursor-agent:gpt-5.6-sol-high`.
+`sync` and `plan` fail on a malformed one; see [docs/PROFILES.md](docs/PROFILES.md#modes-and-roles).
+
 A profile can also set the agent **policy** (gates, budgets and security rules from
 agent-ledger's S2; stricter always wins across profiles) and pinned **commands** such as
 agent-ledger's `ledger`:

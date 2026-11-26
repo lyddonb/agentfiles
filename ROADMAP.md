@@ -123,11 +123,12 @@ Cursor User Rules from outside the app.
 stores User Rules in its own settings with no documented file. Snippets are correct and safe.
 **Prioritize when:** you change the always-on text more than about once a month.
 
-### R13. Cross-model roles through other agent CLIs
-**What:** Accept role entries such as `cli:cursor-agent:gpt-5` and write them to roles.yaml,
-paired with agent-kit's planned `second-opinion` script (agent-kit ROADMAP R11).
-**Why not done:** Depends on that script.
-**Prioritize when:** agent-kit R11 lands.
+### R13. Cross-model roles through other agent CLIs — Done
+A role entry such as `cli:cursor-agent:gpt-5.6-sol-high` is written to roles.yaml only when
+agent-kit's `second_opinion.py` (agent-kit R11) can run it: `sync` and `plan` fail on a bad
+prefix, an unknown agent or an empty model. The known agents are `CLI_AGENTS` in
+`agentfiles/config.py`, a copy of the script's adapters that a CI step checks against the
+agent-kit commit in `agentfiles.lock`. See [docs/PROFILES.md](docs/PROFILES.md#modes-and-roles).
 
 ## P2
 

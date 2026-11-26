@@ -154,6 +154,22 @@ up the entry for the tool they run in; a missing entry or `inherit` means the cu
 Model names are whatever that tool accepts: `opus`/`sonnet` in Claude Code, Cursor's model ids in
 Cursor.
 
+An entry that starts with `cli:` names another agent's CLI instead of a model: bstack skills
+don't start a subagent for it but run agent-kit's `second_opinion.py`, which asks that CLI for a
+read-only review.
+
+```yaml
+roles:
+  reviewers: {claude-code: [opus, cli:cursor-agent:gpt-5.6-sol-high], cursor: [cli:claude:opus]}
+```
+
+The form is `cli:<agent>:<model>`, where the agent is one `second_opinion.py` can run (`claude` or
+`cursor-agent`, the `CLI_AGENTS` table in `agentfiles/config.py`) and the model is whatever that
+CLI's `--model` accepts. `sync` and `plan` fail on a malformed entry (a bad `cli` prefix such as
+`CLI:`, an unknown agent, or no model), naming the role, the tool and the entry, so it never
+reaches `roles.yaml`. They don't check that the CLI is installed: profiles are shared across
+machines, and the script reports a missing CLI as `missing` when it runs.
+
 ## Project profiles
 
 Put a `.agentfiles.yaml` (same keys as a profile) in a repo, then run
