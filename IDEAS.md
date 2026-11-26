@@ -20,9 +20,8 @@ Maybe-someday ideas that don't earn a roadmap slot yet. Promote one to
   no profile uses yet.
 
 ## Quality and safety
-- **Static checks on install** — flag skills whose scripts use `curl | sh`, write outside the
-  project, or read credential files; show it during `update`.
-- **Hidden-Unicode scan** of `SKILL.md` files (APM does this), to catch prompt-injection tricks.
+- **Flag scripts that write outside the project** during `update`. The `curl | sh`, credential
+  file and hidden-Unicode checks shipped with ROADMAP R17; this one needs more than a static read.
 - **Per-skill usage stats** from Claude Code transcripts to find skills you never use. Now
   agent-kit ROADMAP R38.
 
