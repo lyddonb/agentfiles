@@ -127,7 +127,11 @@ class Store:
             if not src.path.is_dir():
                 raise AgentfilesError(f"source {name}: local path {src.path} does not exist")
             return src.path
-        commit = self.locked_commit(name, frozen=frozen)
+        return self.tree_at(name, self.locked_commit(name, frozen=frozen))
+
+    def tree_at(self, name: str, commit: str) -> Path:
+        """The source's files at `commit`, extracted once into the cache and read-only."""
+        src = self.config.sources[name]
         dest = self.base / "trees" / name / commit
         if (dest / ".agentfiles-complete").exists():
             return dest
@@ -182,6 +186,39 @@ class Store:
                   check=False).stdout.strip()
         stat = run(["git", "-C", str(m), "diff", "--stat", old, new] + scope, check=False).stdout.strip()
         return log, stat
+
+    def changed_files(self, name: str, old: str, new: str, paths: list[str]) -> list[str]:
+        m = self._mirror(self.config.sources[name])
+        scope = ["--"] + paths if paths and "." not in paths else []
+        out = run(["git", "-C", str(m), "diff", "--name-only", "--no-renames", old, new] + scope).stdout
+        return [l for l in out.splitlines() if l]
+
+    def commits_touching(self, name: str, old: str, new: str, paths: list[str]) -> list[str]:
+        """The commits in old..new that touched `paths`, oldest first."""
+        m = self._mirror(self.config.sources[name])
+        out = run(["git", "-C", str(m), "log", "--reverse", "--format=%H", f"{old}..{new}", "--", *paths]).stdout
+        return out.split()
+
+    def extract(self, name: str, commit: str, paths: list[str], dest: Path) -> Path:
+        """Write `paths` of the source at `commit` under `dest`, for a read that the cache needn't keep.
+        A path the commit doesn't have is left out."""
+        m = self._mirror(self.config.sources[name])
+        dest.mkdir(parents=True, exist_ok=True)
+        present = run(["git", "-C", str(m), "ls-tree", "--name-only", commit, "--", *paths]).stdout.split("\n")
+        present = [p for p in present if p]
+        if not present:
+            return dest
+        proc = subprocess.run(["git", "-C", str(m), "archive", "--format=tar", commit, "--", *present],
+                              capture_output=True)
+        if proc.returncode != 0:
+            raise AgentfilesError(f"source {name}: git archive {commit[:12]} failed: "
+                                  f"{proc.stderr.decode(errors='replace').strip()}")
+        with tarfile.open(fileobj=io.BytesIO(proc.stdout)) as tf:
+            try:
+                tf.extractall(dest, filter="data")
+            except TypeError:
+                tf.extractall(dest)
+        return dest
 
     def diff(self, name: str, old: str, new: str, paths: list[str]) -> str:
         m = self._mirror(self.config.sources[name])
