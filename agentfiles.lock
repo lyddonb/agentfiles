@@ -25,27 +25,27 @@
       "hash": "sha256:489e57941ff062f9c5257c043c6d36f824c91a6678d8e830fcb66692b8ee0f21"
     },
     "plugin:mine:@bstack": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
-      "hash": "sha256:f37b563b36323accb565b0ac8f00558adf8114810da227cccb259b143e27047b"
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
+      "hash": "sha256:fb76374d1df71032d7dc605e3e707c2271b275744388da99559dba2f8b7f2e8e"
     },
     "plugin:mine:@eng-leadership": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
       "hash": "sha256:930fdb406a73ce26ab27f7a4315636c551598586f6ce6f4a599e5a680539628a"
     },
     "plugin:mine:@essentials": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
-      "hash": "sha256:3306ab53428bce807b68f8c8878c4acba455c9eb578e610e2e47725c846288fc"
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
+      "hash": "sha256:51f994b2d1d466ab1696e64acadc2b116ff76fea9b1f5b200f72b1b3fb8a0d32"
     },
     "plugin:mine:@principles": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
       "hash": "sha256:8b501afa1a9f8bd65318e215ccf6b7d68c33ab09329c198238f839b180c92950"
     },
     "plugin:mine:@research-tools": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
       "hash": "sha256:09102b7d7a40d63c9c537709be8ce3b12ec23dd8038c77037e402980d9d9d2a0"
     },
     "plugin:mine:@video": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
       "hash": "sha256:6673153458e8612eea4cdd8e7ec2e009b077ccd146ce587127e0747465c928f3"
     },
     "plugin:obsidian:@obsidian": {
@@ -93,15 +93,15 @@
       "hash": "sha256:ed779c02323bc590f4e704f3c7729ec12a2d8d0194a51818adf106ef2f2c6f7a"
     },
     "skill:mine:plugins/cfo/skills/cfo-books": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
-      "hash": "sha256:b21ff2aa848146a801e89c46613685f11b6f363cd38fba58e9768565ad504247"
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
+      "hash": "sha256:6c7ae4859932b6fa206abd4ad449cb5e41f8772e5fe46d8961990a7dc568335a"
     },
     "skill:mine:plugins/cfo/skills/estimate-run": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
       "hash": "sha256:71a6a9322143139cfaf97b590c7c0f919fc35be83553e529a0178587dfe72fc5"
     },
     "skill:mine:plugins/cfo/skills/spend-snapshot": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
       "hash": "sha256:5821d1a87461b4f0392cb9dfc76ebbcceb72ccb398a3fe9678685ee196a5b525"
     },
     "skill:remotion:skills/remotion-best-practices": {
@@ -157,9 +157,9 @@
       "ref": "main"
     },
     "mine": {
-      "commit": "983d865e1637795a6c922b2ffcae293ed5f1e119",
+      "commit": "1a6aa9cb57bc89424e8f7736cb85a98ff3266f29",
       "git": "https://github.com/lyddonb/agent-kit",
-      "locked_at": "2026-11-20T02:52:39Z",
+      "locked_at": "2026-11-26T20:06:00Z",
       "ref": "main"
     },
     "obsidian": {
