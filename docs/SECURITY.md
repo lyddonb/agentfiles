@@ -13,6 +13,12 @@ safe. It makes what you install **explicit, pinned, and reviewable**.
   locked commit ever differ from the hash, `sync` stops with an error.
 - **Review before update.** `agentfiles update` shows the commits and changed files that touch
   the paths your profiles use (`--diff` prints the full diff) and asks before accepting.
+- **Lint on update.** For each skill an update changes, `update` reads its docs and scripts
+  without running them and prints, under the commit that brought it in, each new problem: a
+  command that names a script, subcommand or flag the skill doesn't ship, a script that pipes
+  a download into a shell or reads a credential file, and hidden Unicode in a doc. It only
+  reports: you can still accept the update. It can't tell a skill's own `scripts/` from the
+  `scripts/` of a project the skill teaches you to build, so read each line before acting on it.
 - **Gated code execution.** A plugin that ships hooks, MCP servers or a `bin/` folder is only
   installed natively in Claude Code when the profile lists them in `allow:`. Without it, you
   get the plugin's skills only.

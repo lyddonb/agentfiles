@@ -89,7 +89,7 @@ agent-kit is just the `mine` source here. To develop agent-kit and agentfiles to
 | `sync [PROFILE...]` | Install, update and remove to match the profiles (default: `default_profiles`) |
 | `plan [PROFILE...]` | Same as `sync --dry-run` |
 | `sync --project [DIR]` | Install into a project, using `DIR/.agentfiles.yaml` and/or named profiles |
-| `update [SOURCE...]` | Fetch newer commits of each source's `ref`, show the changes, accept into the lock (with the pins of the skills, plugins and commands from that source) |
+| `update [SOURCE...]` | Fetch newer commits of each source's `ref`, show the changes with lint findings under the commits that added them, accept into the lock (with the pins of the skills, plugins and commands from that source) |
 | `lock [PROFILE...]` | Pin everything profiles use without installing (`--frozen` to verify in CI: it fails on any item pinned to another commit than its source) |
 | `list [PROFILE...]` | List profiles and sources, or show what profiles resolve to |
 | `status [--project]` | What agentfiles has installed |

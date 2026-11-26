@@ -172,19 +172,13 @@ agent-kit's `verify-kit` skill (its R27) calls it.
 `tools/validate.py` accepts, and passes after a clean sync of `base`.
 **Prioritize when:** with R0 or R11.
 
-### R17. Upstream skills pass the lint at `agentfiles update`
-**What:** `agentfiles update` runs agent-kit's command check (`check_commands` in its
-`tools/validate.py`: a skill never names a script, subcommand or flag that doesn't exist) on the third-party skills a source update changes, and
-shows the failures beside the commits before the lock accepts them. It also runs the static
-checks listed in [IDEAS.md](IDEAS.md) under Quality and safety. It reports and never blocks on
-its own.
-**Why not done:** The check shipped in agent-kit (its PR 61, was R39), but it only looks under
-agent-kit's own layout, `plugins/*/skills/*/scripts/`, and nothing here calls it. A third-party
-source lays its skills out differently.
-**Depends on:** nothing now.
-**Done when:** an update to a fixture source whose new commit names a missing script prints the
-failure next to that commit, and the update can still be accepted.
-**Prioritize when:** now. The check it runs has merged.
+### R17. Upstream skills pass the lint at `agentfiles update` — Done
+`update` lints each skill a source update changes and prints each new finding under the commit
+that brought it in, and the update can still be accepted. The command check is vendored from
+agent-kit's `tools/validate.py` into `agentfiles/lint.py`, scoped to each skill's own files. It
+also flags scripts that pipe a download into a shell or read credential files, and hidden
+Unicode in skill docs. See [docs/SECURITY.md](docs/SECURITY.md). Left out: "writes outside the
+project", which a static read can't settle.
 
 ### R19. A narrow profile and policy for a proposing agent
 **What:** A profile for an agent that runs on a schedule, reads the ledger and the books, and
