@@ -1,0 +1,25 @@
+Claude Code 2.1.325, claude -p --plugin-dir with one scratch plugin, init event read and the run stopped.
+"skills" = listed in the init event's skills; "command" = only in slash_commands; "none" = in neither.
+validate = agent-kit tools/validate.py check_skill.
+
+header variant                                   Claude Code   validate
+good                                             skills        ok
+duplicate description key                        skills        ok
+closer ---- or "--- trailing"                    skills        ok
+CRLF line endings after the opener               skills        ok
+BOM before the opener                            skills        rejects (no frontmatter)
+anchors, !!str tag, folded >- (merge keys warn)  skills        ok
+plain scalar over two lines                      skills        ok
+"..." document end before the closer            skills        ok
+name differs from folder / Upper / 123 / empty   skills        rejects (name)
+SKILL.md spelled skill.md (case-insensitive fs)  skills        n/a
+skill folder is a symlink                        skills        n/a
+disable-model-invocation: true                   skills        warning only
+no description                                   command       rejects
+description is a mapping                         command       rejects
+YAML error                                       command       rejects
+tab in the header                                command       rejects
+no frontmatter                                   command       rejects
+user-invocable: false                            none          warning only
+
+Every skill is named by its folder, never by its name field.

@@ -2,9 +2,10 @@
   "version": 1,
   "goal": "agentfiles doctor says when Claude Code did not load a plugin or skill the last sync installed, so a skill that syncs cleanly but never reaches the model is caught (ROADMAP R16, Claude Code half).",
   "changed": [
-    "agentfiles/loaded.py: reads Claude Code's init event from claude -p in an empty folder and kills it once the event arrives; compares its plugins and skills with the plugins and skill folders of the last sync's agentfiles-local marketplace.",
+    "agentfiles/loaded.py: reads Claude Code's init event from claude -p in an empty folder and stops it once the event arrives (SIGTERM, so Claude Code removes its session pidfile); compares its plugins and skills with the plugins and skill folders of the last sync's agentfiles-local marketplace.",
     "agentfiles/cli.py: doctor runs that check, skipped with a -- line when claude is missing or the last sync installed no Claude Code plugins.",
-    "tests/test_loaded.py: compare() on each problem kind, and doctor after a real sync through a fake claude that replays an init event.",
+    "A marketplace folder that is gone is a problem line, not a traceback; a plugin whose plugin.json sets its own skills paths gets a note and no skill comparison.",
+    "tests/test_loaded.py: compare() on each problem kind, and doctor after a real sync through a fake claude that replays an init event, including a deleted marketplace.",
     "README.md: the doctor lines say what it now checks.",
     "ROADMAP R16: status for the Claude Code half, with what was measured and why the first Done-when clause cannot be met as worded."
   ],
@@ -12,41 +13,41 @@
     {
       "claim": "After a clean sync, doctor reports every agentfiles plugin and skill loaded; after a sync of a skill with no description it names that skill and exits 1; after the fix it exits 0.",
       "verdict": "VERIFIED",
-      "check": "Under a scratch HOME with a local upstream source: bin/agentfiles sync base, then bin/agentfiles doctor with the real claude 2.1.325 (ok, exit 0); upstream alpha's description removed, sync exit 0, doctor prints 'skill agentfiles:alpha loaded only as a slash command' and exits 1; description restored, sync, doctor exit 0.",
-      "commit": "",
-      "record": "",
+      "check": ".changes/2026-11-27-r16-doctor-claude-code/proof.sh under a scratch HOME with a local upstream source and the real claude: clean sync then doctor exit 0; alpha's description removed, sync exit 0, doctor names agentfiles:alpha and exits 1; description restored, doctor exit 0; no session pidfile left. Rerun with .changes/2026-11-27-r16-doctor-claude-code/proof.sh.",
+      "commit": "9225a1a36af4",
+      "record": ".changes/2026-11-27-r16-doctor-claude-code/proof.txt",
       "remaining": "Only Claude Code. Codex, Cursor, OpenCode and pi wait on R0 and H4."
     },
     {
-      "claim": "On Beau's machine the check is clean: 8 of 8 agentfiles plugins and 28 of 28 skills loaded, with nothing extra.",
-      "verdict": "VERIFIED",
-      "check": "bin/agentfiles doctor from this branch on the real HOME prints 'Claude Code 2.1.325 loaded all 8 agentfiles plugins and 28 skills from the last sync'. Its exit 1 comes from the existing rex duplicate warning, not this check.",
-      "commit": "",
+      "claim": "On a real machine with a full user setup the check is clean: every agentfiles-local plugin and skill is loaded and nothing extra.",
+      "verdict": "UNCHECKED",
+      "check": "bin/agentfiles doctor from this branch on the maintainer's real HOME prints the ok line for the load check.",
+      "commit": "9225a1a36af4",
       "record": "",
-      "remaining": ""
+      "remaining": "Run on one machine; its output names that machine's setup, so it is not recorded in this public repo."
     },
     {
       "claim": "No skill header that agent-kit's tools/validate.py accepts makes Claude Code 2.1.325 drop the skill, except user-invocable: false, which hides it on purpose.",
       "verdict": "VERIFIED",
       "check": "About 35 header variants loaded with claude -p --plugin-dir: drops happen only without a usable string description (none, a mapping, a YAML error, a tab, no frontmatter) and with user-invocable: false. tools/validate.py check_skill run on those six: errors on the first five, a warning only on user-invocable.",
-      "commit": "",
-      "record": "",
+      "commit": "9225a1a36af4",
+      "record": ".changes/2026-11-27-r16-doctor-claude-code/headers.txt",
       "remaining": "So the first Done-when clause cannot be met as written; rewording it is Beau's call."
     },
     {
       "claim": "Reading the init event sends nothing to the model.",
       "verdict": "INCONCLUSIVE",
-      "check": "The process is killed when the init event arrives, which Claude Code emits before its first request; no usage was measured.",
-      "commit": "",
+      "check": "The process is stopped when the init event arrives, which Claude Code emits before its first request; no usage was measured. Two doctor runs in a scratch HOME left no session pidfile and no agentfiles-doctor entry in ~/.claude.json.",
+      "commit": "9225a1a36af4",
       "record": "",
       "remaining": "It does run the user's SessionStart hooks, as any claude start does."
     },
     {
       "claim": "The suite passes and the lock is unchanged.",
       "verdict": "VERIFIED",
-      "check": "make test (119 tests, OK), bin/agentfiles lock --frozen exit 0",
-      "commit": "",
-      "record": "",
+      "check": "make test (121 tests, OK), bin/agentfiles lock --frozen exit 0, verify-work's test_guard.py --base origin/main: 0 findings",
+      "commit": "9225a1a36af4",
+      "record": ".changes/2026-11-27-r16-doctor-claude-code/tests.txt",
       "remaining": ""
     }
   ],
@@ -65,6 +66,6 @@
     }
   ],
   "release": {
-    "note": "agentfiles doctor now checks that Claude Code loaded every plugin and skill the last sync installed, and names a skill Claude Code keeps from the model because its header has no usable description."
+    "note": "agentfiles doctor now checks that Claude Code loaded every plugin and skill the last sync installed, and names a skill Claude Code lists only as a slash command because its header has no usable description."
   }
 }
