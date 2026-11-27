@@ -1,0 +1,4 @@
+$ agentfiles plan builder (bstack lines, worktree without local.yaml)
+  [dry-run] claude plugin install bstack@agentfiles-local --scope user
+  + plugin bstack@agentfiles-local
+  - mine:@bstack: its agents, hooks only work in Claude Code; other tools get its skills

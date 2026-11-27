@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "goal": "Let a profile set each verification check to off, observe or enforce in the policy agentfiles writes, so a new check ships logging and Beau turns it to enforce with one line (agent-kit R32, run 2026-11-27-r32-hook-gates).",
+  "changed": [
+    "policy.checks maps a check id (commit-gate, stop-checks, spec-drift, receipts, test-guard) to off, observe or enforce. The highest mode across profiles, agentfiles.yaml and local.yaml wins; a check nobody names observes; an unknown id or mode is refused, and a bare YAML off counts as off.",
+    "sync writes the map to ~/.agents/policy.yaml as plain id: 'mode' lines, and status prints the modes. A project's .agents/policy.yaml may set a check lower; it parses and the user's mode still applies.",
+    "The builder profile allows bstack's hooks, as Beau decided in agent-kit H14."
+  ],
+  "claims": [
+    {
+      "claim": "Modes merge to the strictest, an unknown id or mode is refused, the rendered file reads back exactly and ends in plain id lines, local.yaml can raise a check but not lower it, and a lower project mode leaves the user's in force.",
+      "verdict": "VERIFIED",
+      "check": "make test (tests/test_policy.py adds five tests and four refusal cases)",
+      "commit": "23c2a98",
+      "record": ".changes/2026-11-27-policy-checks/tests.txt",
+      "remaining": "Beau's real profiles set no check yet, so the synced file on his machine has no checks key and every check observes."
+    },
+    {
+      "claim": "With the allow line, a sync of the builder profile installs bstack natively in Claude Code.",
+      "verdict": "VERIFIED",
+      "check": "agentfiles plan builder in this worktree (no local.yaml), bstack lines",
+      "commit": "23c2a98",
+      "record": ".changes/2026-11-27-policy-checks/plan.txt",
+      "remaining": "On Beau's Mac, local.yaml sends agent-kit only to Codex, Cursor, OpenCode and pi, and Claude Code takes bstack from the agent-kit marketplace, so this line changes nothing there."
+    }
+  ],
+  "next": [
+    {
+      "item": "bstack's commit gate and Stop hook read policy.checks",
+      "source": "run 2026-11-27-r32-hook-gates units 3 and 4 (agent-kit R32)",
+      "why_now": "The mode exists now; nothing reads it yet.",
+      "impact": "A commit without verification and a red tree at stop get logged, then stopped once Beau sets enforce."
+    }
+  ],
+  "release": {
+    "note": "A profile can set each verification check to off, observe or enforce under policy.checks; the strictest mode wins. builder allows bstack's hooks."
+  }
+}
