@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "goal": "agentfiles sync says a copied Claude Code or Cursor skill changed when its content changed, instead of printing \"= claude skill\" because the recorded source path matched.",
+  "changed": [
+    "agentfiles/targets.py: _sync_copies prints = only when the recorded source path matches and a digest of the existing copy equals a digest of the source; _copy_digest walks a tree the way _copy_dir copies it (links followed, dangling links and COPY_IGNORE names left out), and COPY_IGNORE is now shared by both.",
+    "tests/test_agentfiles.py: an edited path source prints (updated) for claude skill and cursor skill while untouched skills print =, and a skill with followed symlinks, a dangling link, .git, .agentfiles-complete and __pycache__ re-syncs as = until a file behind its symlinked folder changes."
+  ],
+  "claims": [
+    {
+      "claim": "After an in-place edit of a path source, the next sync prints \"+ claude skill: alpha (updated)\" and \"+ cursor skill: alpha (updated)\" instead of \"=\", other skills print \"=\", and the sync after that prints \"=\" again.",
+      "verdict": "VERIFIED",
+      "check": "tests/test_agentfiles.py test_claude_skill_line_reports_a_content_change (stub claude) and test_cursor_skill_line_reports_a_content_change: fail on b88af63 with \"= claude skill: alpha\" / \"= cursor skill: alpha\" after the edit, pass on 6f23035; 10 of 10 loop runs pass.",
+      "commit": "6f23035",
+      "record": ".changes/2026-11-27-sync-copy-content/tests.txt",
+      "remaining": "Claude Code runs through a stub CLI in the tests; the line is printed before any claude command, so the stub does not change it."
+    },
+    {
+      "claim": "On an already synced install the fix marks nothing as changed that main does not.",
+      "verdict": "VERIFIED",
+      "check": "bin/agentfiles plan --offline with the same config from main and from this branch on the maintainer's real HOME: identical output, every copied skill line still =; state.json hash unchanged by both runs.",
+      "commit": "6f23035",
+      "record": ".changes/2026-11-27-sync-copy-content/real-install.txt",
+      "remaining": "Only the result is kept: the full output names that machine's setup. No timing cost was measurable in three paired runs."
+    },
+    {
+      "claim": "The suite passes and the lock is unchanged.",
+      "verdict": "VERIFIED",
+      "check": "python3 -m unittest discover -s tests (124 tests, OK); bin/agentfiles lock --frozen: unchanged; CliAgentsMatchAgentKitTest with AGENTFILES_REQUIRE_AGENT_KIT=1: OK.",
+      "commit": "6f23035",
+      "record": ".changes/2026-11-27-sync-copy-content/tests.txt",
+      "remaining": ""
+    }
+  ],
+  "next": [
+    {
+      "item": "Check whether Claude Code serves an edited path skill after sync: the generated plugin's version and the marketplace digest hash skill paths only, so a content edit changes neither and no marketplace update runs.",
+      "source": "inferred from agentfiles/targets.py _write_marketplace (version from d.claude_links, digest from manifest and native fingerprints)",
+      "why_now": "Same root as this bug: change is decided on paths. Not proven: the version cache folder on one machine held no skills, so Claude Code may read the marketplace folder directly.",
+      "impact": "If it caches by version, edits to local agent-kit skills never reach Claude Code until a path changes."
+    }
+  ],
+  "release": {
+    "note": "agentfiles sync now prints \"(updated)\" for a Claude Code or Cursor skill whose content changed, instead of \"=\"."
+  }
+}

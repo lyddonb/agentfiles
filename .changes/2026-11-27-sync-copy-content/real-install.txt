@@ -1,0 +1,4 @@
+bin/agentfiles plan --offline, same config, main (0f1caa1) vs this branch (6f23035), real HOME
+plan output: identical
+copied-skill lines marked (updated) on this branch: 0
+state.json: unchanged by both runs

@@ -356,6 +356,50 @@ class SyncTests(Fixture):
         state = json.loads((self.home / ".local" / "state" / "agentfiles" / "state.json").read_text())
         self.assertEqual(state.get("cursor_links") or {}, {})
 
+    def assert_copied_skill_lines(self, profile: str, target: str, label: str, other: str):
+        self.run_cli("sync", profile, "--targets", target)
+        code, out = self.run_cli("sync", profile, "--targets", target)
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"= {label}: alpha", out, "an untouched skill re-syncs as unchanged")
+
+        (self.up / "skills" / "alpha" / "SKILL.md").write_text(
+            "---\nname: alpha\ndescription: Edited. Use when testing.\n---\n")
+        code, out = self.run_cli("sync", profile, "--targets", target)
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"{label}: alpha (updated)", out, "an edited skill must not print '='")
+        self.assertNotIn(f"= {label}: alpha", out)
+        self.assertIn(f"= {label}: {other}", out, "only the edited skill is reported as changed")
+
+        code, out = self.run_cli("sync", profile, "--targets", target)
+        self.assertIn(f"= {label}: alpha", out, "once copied, the edit is no longer a change")
+
+    def test_cursor_skill_line_reports_a_content_change(self):
+        self.assert_copied_skill_lines("base", "cursor", "cursor skill", "gamma")
+
+    def test_claude_skill_line_reports_a_content_change(self):
+        self.stub_claude()
+        self.assert_copied_skill_lines("more", "claude-code", "claude skill", "beta")
+
+    def test_untouched_skill_with_symlink_and_ignored_files_stays_unchanged(self):
+        alpha = self.up / "skills" / "alpha"
+        write(self.tmp / "shared-ref.md", "Shared reference.\n")
+        (alpha / "ref.md").symlink_to(self.tmp / "shared-ref.md")
+        (alpha / "refs").symlink_to(self.tmp / "refsdir", target_is_directory=True)
+        write(self.tmp / "refsdir" / "deep.md", "Deep.\n")
+        (alpha / "gone.md").symlink_to(self.tmp / "missing.md")
+        write(alpha / ".git" / "HEAD", "ref: refs/heads/main\n")
+        write(alpha / ".agentfiles-complete", "")
+        write(alpha / "scripts" / "__pycache__" / "x.cpython-312.pyc", "bytecode")
+        self.run_cli("sync", "base", "--targets", "cursor")
+        code, out = self.run_cli("sync", "base", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        self.assertIn("= cursor skill: alpha", out,
+                      "followed symlinks, dangling links and copy-ignored files are not a change")
+
+        write(self.tmp / "refsdir" / "deep.md", "Deeper.\n")
+        code, out = self.run_cli("sync", "base", "--targets", "cursor")
+        self.assertIn("cursor skill: alpha (updated)", out, "an edit behind a symlinked dir is a change")
+
     def test_cursor_migrates_symlinks_to_copies(self):
         """Older agentfiles (#24) linked into ~/.cursor/skills; re-sync must replace those
         with durable copies so Sync Skills can pick them up."""
