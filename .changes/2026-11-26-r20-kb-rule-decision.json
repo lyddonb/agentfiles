@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "goal": "Put the always-on kb rule in profiles/beau.yaml in front of Beau as a decision, with agent-kit R42's evidence and its limits, without changing the rule.",
+  "changed": [
+    "ROADMAP R20: the rule, R42's result for it (0 kb calls in the 10 runs given it verbatim, 2 of them in scope), the limits of that harness, and three options: drop, keep with a real-session measurement, or load named entries by id.",
+    "HUMAN_TASKS H14: Beau picks an option; it unblocks R20."
+  ],
+  "claims": [
+    {
+      "claim": "The figures in R20 match agent-kit's R42 record: 0 kb calls in every kb-connected arm (kb, both, kbr, 10 runs each), the trails arm opened 9 of 15 named records and scored 0.35 overall against no KB.",
+      "verdict": "VERIFIED",
+      "check": "read scores.txt, step-following.txt, prereg.md and the R42 change record on agent-kit main",
+      "commit": "",
+      "record": "https://github.com/lyddonb/agent-kit/tree/main/.changes/2026-11-26-r42-kb-eval",
+      "remaining": "The kbr arm's prompt text is not in agent-kit's repo; that it matched beau.yaml rests on R42's prereg, which says the two paragraphs were used verbatim."
+    },
+    {
+      "claim": "Nothing outside ROADMAP.md, HUMAN_TASKS.md and this record changed; profiles/beau.yaml is untouched.",
+      "verdict": "VERIFIED",
+      "check": "git diff --stat origin/main, make test, bin/agentfiles lock --frozen",
+      "commit": "",
+      "record": "",
+      "remaining": ""
+    }
+  ],
+  "next": [
+    {
+      "item": "Beau picks A, B or C for the kb rule.",
+      "source": "HUMAN_TASKS H14",
+      "why_now": "The rule is live on every agent synced from beau, and R42 is its first measurement.",
+      "impact": "A or C removes always-on text no measured run acted on; B keeps it and starts the first measurement in real sessions."
+    }
+  ],
+  "release": {
+    "note": "No behavior change. ROADMAP R20 and HUMAN_TASKS H14 record the open decision on the always-on kb rule after agent-kit R42."
+  }
+}
