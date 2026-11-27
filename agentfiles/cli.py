@@ -396,7 +396,11 @@ def cmd_doctor(args) -> int:
 
 
 def _doctor_claude_loaded(claude_state: dict) -> int:
-    expected = loaded.expected_from_state(claude_state)
+    try:
+        expected = loaded.expected_from_state(claude_state)
+    except AgentfilesError as e:
+        warn(f"Claude Code load check: {e}")
+        return 1
     if expected is None:
         info("  --  Claude Code load check: the last sync installed no Claude Code plugins")
         return 0

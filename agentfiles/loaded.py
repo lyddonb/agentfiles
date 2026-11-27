@@ -2,8 +2,8 @@
 
 Claude Code reports its plugins and skills in the `init` event of `claude -p --output-format
 stream-json --verbose`, before any model call. It names a plugin skill `<plugin>:<folder>`, and it
-leaves a skill out of `skills` (keeping it only as a slash command) when it finds no usable
-`description`. agentfiles installs such a skill without complaint, so only this check sees it.
+lists a skill as a slash command but not as a skill when it finds no usable `description`.
+agentfiles installs such a skill without complaint, so only this check sees it.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .util import parse_frontmatter
+from .util import AgentfilesError, parse_frontmatter, short
 
 INIT_TIMEOUT_S = 60
 
@@ -24,6 +24,7 @@ class Expected:
     marketplace: str
     plugins: dict[str, frozenset[str]]
     hidden: frozenset[str] = frozenset()
+    own_layout: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -38,17 +39,25 @@ def expected_from_state(claude_state: dict) -> Expected | None:
     if not root or not plugin_ids:
         return None
     root = Path(root)
-    manifest = json.loads((root / ".claude-plugin" / "marketplace.json").read_text())
+    manifest_path = root / ".claude-plugin" / "marketplace.json"
+    if not manifest_path.is_file():
+        raise AgentfilesError(f"the last sync's Claude marketplace {short(manifest_path)} is gone; "
+                              f"run `agentfiles sync`")
+    manifest = json.loads(manifest_path.read_text())
     plugins: dict[str, frozenset[str]] = {}
     hidden: set[str] = set()
+    own_layout: set[str] = set()
     for pid in plugin_ids:
         name = pid.split("@", 1)[0]
+        plugin_json = root / "plugins" / name / ".claude-plugin" / "plugin.json"
+        if plugin_json.is_file() and "skills" in json.loads(plugin_json.read_text()):
+            own_layout.add(name)
         skills_dir = root / "plugins" / name / "skills"
         folders = sorted(p.parent for p in skills_dir.glob("*/SKILL.md")) if skills_dir.is_dir() else []
         plugins[name] = frozenset(f.name for f in folders)
         hidden |= {f"{name}:{f.name}" for f in folders
                    if parse_frontmatter(f / "SKILL.md").get("user-invocable") is False}
-    return Expected(manifest["name"], plugins, frozenset(hidden))
+    return Expected(manifest["name"], plugins, frozenset(hidden), frozenset(own_layout))
 
 
 def compare(expected: Expected, init: dict) -> Report:
@@ -71,6 +80,9 @@ def compare(expected: Expected, init: dict) -> Report:
             r.problems.append(f"plugin {name}@{expected.marketplace} is installed but Claude Code did not load it")
 
     for name in sorted(set(expected.plugins) & ours):
+        if name in expected.own_layout:
+            r.notes.append(f"plugin {name} sets its own skills paths in plugin.json; its skills are not checked")
+            continue
         for folder in sorted(expected.plugins[name]):
             sid = f"{name}:{folder}"
             if sid in skills:
@@ -79,7 +91,7 @@ def compare(expected: Expected, init: dict) -> Report:
                 r.notes.append(f"skill {sid} sets user-invocable: false, so Claude Code does not list it")
             elif sid in commands:
                 r.problems.append(f"skill {sid} loaded only as a slash command: Claude Code found no usable "
-                                  f"description in its SKILL.md header, so the model never sees it")
+                                  f"description in its SKILL.md header, so it does not list it as a skill")
             else:
                 r.problems.append(f"skill {sid} is installed but Claude Code did not load it")
         for sid in sorted(s for s in skills if s.split(":", 1)[0] == name):
@@ -111,8 +123,16 @@ def claude_init(timeout: float = INIT_TIMEOUT_S) -> dict | None:
             return None
         finally:
             timer.cancel()
-            proc.kill()
-            proc.wait()
+            _stop(proc)
+
+
+def _stop(proc: subprocess.Popen) -> None:
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
 
 
 def _kill_after(proc: subprocess.Popen, seconds: float) -> threading.Timer:

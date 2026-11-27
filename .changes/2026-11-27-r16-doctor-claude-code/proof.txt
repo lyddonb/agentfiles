@@ -1,0 +1,11 @@
+claude 2.1.325 (Claude Code)
+clean sync exit 0
+  ok  Claude Code 2.1.325 loaded all 2 agentfiles plugins and 2 skills from the last sync
+clean doctor exit 0
+broken sync exit 0
+warning: skill agentfiles:alpha loaded only as a slash command: Claude Code found no usable description in its SKILL.md header, so it does not list it as a skill
+broken doctor exit 1
+fixed sync exit 0
+  ok  Claude Code 2.1.325 loaded all 2 agentfiles plugins and 2 skills from the last sync
+fixed doctor exit 0
+session pidfiles left: 0

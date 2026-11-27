@@ -190,10 +190,10 @@ agent-kit's `verify-kit` skill (its R27) calls it.
 (`claude -p --output-format stream-json --verbose`, killed before any model call) and compares
 its plugins and skills with the plugins and skill folders the last sync installed in
 `agentfiles-local`. Expected comes from the sync state, not the lock: the lock also pins plugins
-Beau installs from other marketplaces (bstack from `agent-kit`), so a lock-based check fails on a
-healthy machine. On Beau's Mac it reports all 8 plugins and 28 skills loaded. Measured on Claude
-Code 2.1.325 over about 35 header variants: a skill is named by its folder, and it leaves the
-model's list (staying a slash command only) when its header has no usable string `description`.
+a user may have installed from another marketplace instead, so a lock-based check fails on a
+healthy machine. Measured on Claude
+Code 2.1.325 over about 35 header variants: a skill is named by its folder, and it is listed as
+a slash command and not as a skill when its header has no usable string `description`.
 `resolve.py` installs such a skill without a word, so this is the check that sees it. The first
 clause of the Done when can't be met as worded: every header that drops a skill also fails
 agent-kit's `tools/validate.py`, and the one header validate accepts that hides a skill,

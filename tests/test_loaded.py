@@ -65,6 +65,12 @@ class CompareTests(unittest.TestCase):
         self.assertEqual(len(r.problems), 1, r.problems)
         self.assertIn("agentfiles:old is loaded but the last sync did not install it", r.problems[0])
 
+    def test_a_plugin_with_its_own_skill_paths_is_not_judged(self):
+        expected = Expected(self.expected.marketplace, self.expected.plugins, own_layout=frozenset({"kit"}))
+        r = compare(expected, init_event(self.ours, ["agentfiles:alpha", "kit:elsewhere"]))
+        self.assertEqual(r.problems, [], "sync cannot change where such a plugin keeps its skills")
+        self.assertEqual(len(r.notes), 1, r.notes)
+
     def test_user_invocable_false_is_a_note(self):
         expected = Expected(self.expected.marketplace, self.expected.plugins, frozenset({"agentfiles:alpha"}))
         r = compare(expected, init_event(self.ours, ["kit:gamma"]))
@@ -109,6 +115,17 @@ class DoctorLoadCheckTests(Fixture):
         code, out = self.run_cli("doctor")
         self.assertEqual(code, 1, out)
         self.assertIn("agentfiles:alpha loaded only as a slash command", out)
+
+    def test_a_missing_marketplace_is_a_problem_not_a_crash(self):
+        code, out = self.run_cli("sync", "base", "--targets", "claude-code")
+        self.assertEqual(code, 0, out)
+        manifest = self.home / ".local" / "share" / "agentfiles" / "claude-marketplace" / ".claude-plugin" / "marketplace.json"
+        self.assertTrue(manifest.is_file(), f"the fixture's sync should write {manifest}")
+        manifest.unlink()
+        code, out = self.run_cli("doctor")
+        self.assertEqual(code, 1, out)
+        self.assertIn("Claude marketplace", out)
+        self.assertIn("is gone", out)
 
     def test_no_init_event_is_a_problem(self):
         code, out = self.run_cli("sync", "base", "--targets", "claude-code")
