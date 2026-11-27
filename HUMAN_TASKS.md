@@ -18,6 +18,7 @@ the listed work. Do them roughly in order.
 | H11 | Review the pending pstack changes | To do |
 | H12 | Merge agent-kit's verification and planning branch, then re-lock `mine` | **Done** |
 | H13 | Decide whether the cfo plugin belongs in a profile | **Done** (the `cfo` add-on) |
+| H14 | Decide the always-on kb rule after agent-kit R42 | To do |
 
 ---
 
@@ -146,3 +147,13 @@ launchd job run it straight from agent-kit.
 use of `cfo-brief`, if one ever shows up, with the plugin name and an empty version. R16's
 `doctor` needs no exception for the three. If `cfo-brief` reaches a tool some other way, R16
 should report it: nothing installs it.
+
+### H14. Decide the always-on kb rule after agent-kit R42
+**Why:** agent-kit's R42 eval gave Claude Sonnet the two kb paragraphs in `profiles/beau.yaml`
+verbatim with the kb server connected, and no run searched it, including the two in-scope
+design tasks. The harness differs from your machine in ways that matter, so this is a judgment
+call, not a verdict.
+**Steps:** Read ROADMAP R20 (the evidence, its limits, and options A drop, B keep, C named
+entries by id) and pick one. An agent then makes the change, or for B sets up the measurement
+R20 names.
+**Unblocks:** ROADMAP R20.

@@ -130,6 +130,48 @@ prefix, an unknown agent or an empty model. The known agents are `CLI_AGENTS` in
 `agentfiles/config.py`, a copy of the script's adapters that a CI step checks against the
 agent-kit commit in `agentfiles.lock`. See [docs/PROFILES.md](docs/PROFILES.md#modes-and-roles).
 
+### R20. Decide the always-on kb rule after agent-kit R42
+**What:** `profiles/beau.yaml` ships two `instructions:` paragraphs to every agent
+synced from it: search the
+`kb` MCP server with `search_knowledge` before design work on AI engineering, agents, evals or
+engineering leadership, and read a topic page with `get_note` on its exact path. agent-kit's
+R42 eval ([PR 132](https://github.com/lyddonb/agent-kit/pull/132), evidence in
+[`.changes/2026-11-26-r42-kb-eval/`](https://github.com/lyddonb/agent-kit/tree/main/.changes/2026-11-26-r42-kb-eval))
+gave Claude Sonnet both paragraphs verbatim with the kb server connected (its `kbr` arm). In 10
+runs it made no kb tool call and no tool search for the server. Two of those tasks (t9 and t10,
+both build tasks on agent tooling) are squarely in the rule's scope, and neither searched. Across
+all 30 kb-connected runs in R42, the count is the same: 0. Beau picks one of three options
+(HUMAN_TASKS H14):
+- **A. Drop both paragraphs.** Every session stops carrying text it did not act on. The kb
+  server stays installed, so an agent asked outright can still use it (R42's positive control
+  tried it when told to; that harness refused the call). Also touches `tests/test_agentfiles.py`, which asserts a
+  `search_knowledge` line, and the `kb` row in `docs/PERSONAS.md`, which says two always-on
+  instructions tell agents to search.
+- **B. Keep them as they are.** The case for it: R42's harness is not how the rule loads on
+  Beau's machine (limits below), so its zero says little about real sessions. Choose this with
+  the measurement under "Done when", or the rule stays untested.
+- **C. Load named entries by id.** Drop the "search before you design" paragraph. Keep the
+  topic-page paragraph, which already names exact paths, or have a skill or task name the
+  entries to read. This matches the shape agent-kit's `docs/KNOWLEDGE.md` now allows (entries
+  loaded by id behind a passing eval). R42 does not back it either: its `trails` arm named
+  related records, opened 9 of 15, and still scored a 0.35 win share against no KB, below the
+  0.5 a gain needs. No arm tested topic pages by path.
+
+**Limits of the evidence:** `claude -p` with `--setting-sources ""` (no user settings),
+Claude Sonnet only. The paragraphs were appended to the system prompt after beau-mode, not
+loaded from `~/.claude/rules/` as a rules file. Only 2 of 10 tasks were in scope. In that
+harness a kb call would have been refused anyway (`acceptEdits` does not grant MCP tools), so
+R42 measures whether the rule triggers a lookup, not what a lookup adds. The tasks were
+engineering changes to these repos, not open questions about AI engineering, where the rule
+might fire more.
+**Why not done:** It is Beau's call, and the rule is his own.
+**Depends on:** HUMAN_TASKS H14.
+**Done when:** `profiles/beau.yaml` matches the chosen option and the test and `PERSONAS.md`
+row agree with it. For B, also: the kb server's own search log is compared
+with the interactive sessions over the same weeks that did in-scope design work, so the rule is
+measured where it really loads. Counts from that log stay out of this public repo.
+**Prioritize when:** now. The rule is live on every agent, and R42 is its first measurement.
+
 ## P2
 
 ### R14. `agentfiles review-upstream`
