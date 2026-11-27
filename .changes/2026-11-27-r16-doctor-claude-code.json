@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "goal": "agentfiles doctor says when Claude Code did not load a plugin or skill the last sync installed, so a skill that syncs cleanly but never reaches the model is caught (ROADMAP R16, Claude Code half).",
+  "changed": [
+    "agentfiles/loaded.py: reads Claude Code's init event from claude -p in an empty folder and kills it once the event arrives; compares its plugins and skills with the plugins and skill folders of the last sync's agentfiles-local marketplace.",
+    "agentfiles/cli.py: doctor runs that check, skipped with a -- line when claude is missing or the last sync installed no Claude Code plugins.",
+    "tests/test_loaded.py: compare() on each problem kind, and doctor after a real sync through a fake claude that replays an init event.",
+    "README.md: the doctor lines say what it now checks.",
+    "ROADMAP R16: status for the Claude Code half, with what was measured and why the first Done-when clause cannot be met as worded."
+  ],
+  "claims": [
+    {
+      "claim": "After a clean sync, doctor reports every agentfiles plugin and skill loaded; after a sync of a skill with no description it names that skill and exits 1; after the fix it exits 0.",
+      "verdict": "VERIFIED",
+      "check": "Under a scratch HOME with a local upstream source: bin/agentfiles sync base, then bin/agentfiles doctor with the real claude 2.1.325 (ok, exit 0); upstream alpha's description removed, sync exit 0, doctor prints 'skill agentfiles:alpha loaded only as a slash command' and exits 1; description restored, sync, doctor exit 0.",
+      "commit": "",
+      "record": "",
+      "remaining": "Only Claude Code. Codex, Cursor, OpenCode and pi wait on R0 and H4."
+    },
+    {
+      "claim": "On Beau's machine the check is clean: 8 of 8 agentfiles plugins and 28 of 28 skills loaded, with nothing extra.",
+      "verdict": "VERIFIED",
+      "check": "bin/agentfiles doctor from this branch on the real HOME prints 'Claude Code 2.1.325 loaded all 8 agentfiles plugins and 28 skills from the last sync'. Its exit 1 comes from the existing rex duplicate warning, not this check.",
+      "commit": "",
+      "record": "",
+      "remaining": ""
+    },
+    {
+      "claim": "No skill header that agent-kit's tools/validate.py accepts makes Claude Code 2.1.325 drop the skill, except user-invocable: false, which hides it on purpose.",
+      "verdict": "VERIFIED",
+      "check": "About 35 header variants loaded with claude -p --plugin-dir: drops happen only without a usable string description (none, a mapping, a YAML error, a tab, no frontmatter) and with user-invocable: false. tools/validate.py check_skill run on those six: errors on the first five, a warning only on user-invocable.",
+      "commit": "",
+      "record": "",
+      "remaining": "So the first Done-when clause cannot be met as written; rewording it is Beau's call."
+    },
+    {
+      "claim": "Reading the init event sends nothing to the model.",
+      "verdict": "INCONCLUSIVE",
+      "check": "The process is killed when the init event arrives, which Claude Code emits before its first request; no usage was measured.",
+      "commit": "",
+      "record": "",
+      "remaining": "It does run the user's SessionStart hooks, as any claude start does."
+    },
+    {
+      "claim": "The suite passes and the lock is unchanged.",
+      "verdict": "VERIFIED",
+      "check": "make test (119 tests, OK), bin/agentfiles lock --frozen exit 0",
+      "commit": "",
+      "record": "",
+      "remaining": ""
+    }
+  ],
+  "next": [
+    {
+      "item": "Reword R16's first Done-when clause to the failure Claude Code actually has: a skill with no usable description, which sync installs.",
+      "source": "ROADMAP R16",
+      "why_now": "As written it names a header that doesn't exist on Claude Code 2.1.325, so the item can't be closed.",
+      "impact": "R16's Claude Code half can be marked done."
+    },
+    {
+      "item": "The other tools' half of doctor.",
+      "source": "ROADMAP R16, R0, HUMAN_TASKS H4",
+      "why_now": "Not now: it needs how Codex, Cursor, OpenCode and pi report loaded skills, which H4 confirms on real machines.",
+      "impact": "One command replaces the hand checks of R0 and R11."
+    }
+  ],
+  "release": {
+    "note": "agentfiles doctor now checks that Claude Code loaded every plugin and skill the last sync installed, and names a skill Claude Code keeps from the model because its header has no usable description."
+  }
+}
