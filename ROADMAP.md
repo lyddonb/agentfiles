@@ -186,6 +186,20 @@ agent-kit's `verify-kit` skill (its R27) calls it.
 **Done when:** the check fails for a skill whose YAML header is broken in a way agent-kit's
 `tools/validate.py` accepts, and passes after a clean sync of `base`.
 **Prioritize when:** with R0 or R11.
+**Status (2026-11-27):** the Claude Code half is built. `doctor` reads Claude Code's `init` event
+(`claude -p --output-format stream-json --verbose`, killed before any model call) and compares
+its plugins and skills with the plugins and skill folders the last sync installed in
+`agentfiles-local`. Expected comes from the sync state, not the lock: the lock also pins plugins
+Beau installs from other marketplaces (bstack from `agent-kit`), so a lock-based check fails on a
+healthy machine. On Beau's Mac it reports all 8 plugins and 28 skills loaded. Measured on Claude
+Code 2.1.325 over about 35 header variants: a skill is named by its folder, and it leaves the
+model's list (staying a slash command only) when its header has no usable string `description`.
+`resolve.py` installs such a skill without a word, so this is the check that sees it. The first
+clause of the Done when can't be met as worded: every header that drops a skill also fails
+agent-kit's `tools/validate.py`, and the one header validate accepts that hides a skill,
+`user-invocable: false`, is deliberate (doctor prints it as a note). The proof uses an upstream
+skill with no description instead, which sync installs and validate would reject. Codex,
+Cursor, OpenCode and pi still wait on R0 and H4.
 
 ### R17. Upstream skills pass the lint at `agentfiles update` — Done
 `update` lints each skill a source update changes and prints each new finding under the commit

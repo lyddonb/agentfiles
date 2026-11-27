@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-from . import __version__
+from . import __version__, loaded
 from .apm import emit_apm
 from .config import KNOWN_TARGETS, Config, Profile, parse_profile
 from .lint import Finding, changed_skills, introduced_by, key_counts, lint_at, new_findings
@@ -391,7 +391,32 @@ def cmd_doctor(args) -> int:
         problems += 1
     elif link_dests:
         info(f"  ok  {len(link_dests)} installed skill links resolve")
+    problems += _doctor_claude_loaded(state.get("claude") or {})
     return 1 if problems else 0
+
+
+def _doctor_claude_loaded(claude_state: dict) -> int:
+    expected = loaded.expected_from_state(claude_state)
+    if expected is None:
+        info("  --  Claude Code load check: the last sync installed no Claude Code plugins")
+        return 0
+    if not shutil.which("claude"):
+        info("  --  Claude Code load check: claude not found")
+        return 0
+    init = loaded.claude_init()
+    if init is None:
+        warn("Claude Code load check: `claude -p` gave no init event, so what it loaded is unknown")
+        return 1
+    report = loaded.compare(expected, init)
+    for note in report.notes:
+        info(f"  note  {note}")
+    for problem in report.problems:
+        warn(problem)
+    if not report.problems:
+        n = sum(len(s) for s in expected.plugins.values())
+        info(f"  ok  Claude Code {init.get('claude_code_version', '?')} loaded all {len(expected.plugins)} "
+             f"agentfiles plugins and {n} skills from the last sync")
+    return len(report.problems)
 
 
 def _pin_items(cfg: Config, store: Store, profiles: list[str], *, frozen: bool) -> set[str]:

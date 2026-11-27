@@ -39,7 +39,7 @@ agentfiles list                            # profiles and sources
 agentfiles list builder                    # what a profile resolves to
 agentfiles plan builder                    # dry run: what would change
 agentfiles sync builder                    # do it
-agentfiles doctor                          # check tools and duplicates
+agentfiles doctor                          # check tools, duplicates, and what Claude Code loaded
 ```
 
 Restart running agents afterwards so they pick up new skills. `sync` ends with a
@@ -95,7 +95,7 @@ agent-kit is just the `mine` source here. To develop agent-kit and agentfiles to
 | `status [--project]` | What agentfiles has installed |
 | `uninstall [--project]` | Remove everything agentfiles installed for that scope |
 | `emit-apm PROFILE...` | Write an [APM](https://microsoft.github.io/apm/) `apm.yml` so teammates can install a profile without agentfiles |
-| `doctor` | Check tools, config, and duplicate skills |
+| `doctor` | Check tools, config and duplicate skills, and that Claude Code loaded every plugin and skill the last sync installed |
 
 Common flags: `--targets claude-code,codex` (limit tools), `--frozen` (never re-lock; for CI),
 `--offline` (use only cached sources), `--dry-run`.
