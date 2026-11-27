@@ -515,7 +515,8 @@ class Applier:
             if not clobber and dest not in old and dp.exists() and not managed_symlink:
                 warn(f"{short(dest)} exists and is not managed by agentfiles; skipping")
                 continue
-            if old.get(dest) == src and dp.is_dir() and not dp.is_symlink():
+            if (old.get(dest) == src and dp.is_dir() and not dp.is_symlink()
+                    and _copy_digest(dp) == _copy_digest(Path(src))):
                 same(f"{label}: {dp.name}")
             else:
                 ok(f"{label}: {dp.name}" + (" (updated)" if dest in old or managed_symlink else ""))
@@ -918,11 +919,29 @@ def _text_file(path: Path) -> bool:
     return True
 
 
+COPY_IGNORE = (".git", ".agentfiles-complete")
+
+
 def _copy_dir(src: Path, dest: Path) -> None:
     _remove_entry(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(src, dest, symlinks=False, ignore_dangling_symlinks=True,
-                    ignore=shutil.ignore_patterns(".git", ".agentfiles-complete"))
+                    ignore=shutil.ignore_patterns(*COPY_IGNORE))
+
+
+def _copy_digest(root: Path) -> str:
+    h = hashlib.sha256()
+    for dirpath, dirs, files in os.walk(root, followlinks=True):
+        dirs[:] = sorted(d for d in dirs if d not in COPY_IGNORE)
+        base = Path(dirpath)
+        h.update(f"D {base.relative_to(root).as_posix()}\n".encode())
+        for name in sorted(files):
+            f = base / name
+            if name in COPY_IGNORE or not f.exists():
+                continue
+            h.update(f"F {f.relative_to(root).as_posix()}\n".encode())
+            h.update(f.read_bytes())
+    return h.hexdigest()
 
 
 def _remove_entry(p: Path) -> None:
