@@ -68,6 +68,14 @@ class Scope:
         return (self.project / ".cursor" / "skills") if self.project else Path.home() / ".cursor" / "skills"
 
     @property
+    def cursor_plugins_dir(self) -> Path | None:
+        """Unpacked Cursor plugins. User scope only: Cursor skips a symlink that points outside
+        this folder, and a project sync must not install a second global copy."""
+        if self.project:
+            return None
+        return Path.home() / ".cursor" / "plugins" / "local"
+
+    @property
     def generated_dir(self) -> Path:
         return (self.project / ".agentfiles") if self.project else data_dir()
 
@@ -96,6 +104,7 @@ class Scope:
 class Desired:
     shared_links: dict[str, str] = field(default_factory=dict)   # dest -> src
     cursor_links: dict[str, str] = field(default_factory=dict)   # dest -> src (~/.cursor/skills copies)
+    cursor_plugins: dict[str, str] = field(default_factory=dict)  # dest -> plugin root (~/.cursor/plugins/local)
     claude_links: dict[str, str] = field(default_factory=dict)   # skill name -> src (agentfiles plugin)
     claude_native: dict[str, dict] = field(default_factory=dict) # plugin name -> {root, entry, skills, ref}
     claude_mcp: dict[str, dict] = field(default_factory=dict)
@@ -145,9 +154,26 @@ def desired_state(plan: Plan, scope: Scope) -> Desired:
         d.shared_links = {str(scope.shared_skills_dir / n): str(s.path) for n, s in sorted(shared.items())}
 
     if "cursor" in targets:
+        # A Cursor plugin (agents, commands, hooks) is a real directory copy. Its skills live
+        # in that copy, so they are not also written under ~/.cursor/skills.
+        native_skills: set[str] = set()
+        if scope.cursor_plugins_dir is not None:
+            for p in plan.plugins:
+                if p.cursor_native and _goes_to(p.item, {"cursor"}):
+                    dest = str(scope.cursor_plugins_dir / p.name)
+                    prev = d.cursor_plugins.get(dest)
+                    if prev and prev != str(p.root):
+                        raise AgentfilesError(
+                            f"two Cursor plugins named {p.name!r}: {prev} and {p.root}")
+                    d.cursor_plugins[dest] = str(p.root)
+                    native_skills |= {s.name for s in p.skills}
+        elif any(p.cursor_native and _goes_to(p.item, {"cursor"}) for p in plan.plugins):
+            d.notes.append("Cursor plugins install only on a global sync, into ~/.cursor/plugins/local.")
         # Cursor-only channel: do not also write these into ~/.agents/skills (Cursor reads
         # both roots; dual install would show each skill twice in `/`).
         cursor = _collect_skills(plan, {"cursor"}, short(scope.cursor_skills_dir))
+        for name in native_skills:
+            cursor.pop(name, None)
         d.cursor_links = {str(scope.cursor_skills_dir / n): str(s.path) for n, s in sorted(cursor.items())}
 
     if "claude-code" in targets:
@@ -182,7 +208,8 @@ def desired_state(plan: Plan, scope: Scope) -> Desired:
 
     others = targets - {"claude-code"}
     for p in plan.plugins:
-        extra = p.components - {"mcp"}
+        covered = {"agents", "hooks", "commands"} if p.cursor_native and "cursor" in others else set()
+        extra = p.components - {"mcp"} - covered
         if extra and others and _goes_to(p.item, others):
             d.notes.append(f"{p.item.ref}: its {', '.join(sorted(extra))} only work in Claude Code; "
                            f"other tools get its skills" + ("" if p.skills else " (it has none)"))
@@ -602,6 +629,8 @@ class Applier:
         # clobber=False so a hand-installed ~/.cursor/skills/<name> is left alone.
         self.new["cursor_links"] = self._sync_copies(
             d.cursor_links, self.old.get("cursor_links") or {}, "cursor skill", clobber=False)
+        self.new["cursor_plugins"] = self._sync_copies(
+            d.cursor_plugins, self.old.get("cursor_plugins") or {}, "cursor plugin", clobber=False)
 
         old_claude = self.old.get("claude") or {}
         if "claude-code" in targets and not self.claude_bin and not self.dry:

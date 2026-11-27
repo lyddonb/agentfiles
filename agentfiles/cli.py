@@ -270,7 +270,10 @@ def cmd_status(args) -> int:
     info(f"Shared skills ({len(links)}): " + ", ".join(sorted(Path(d).name for d in links)))
     info(f"Cursor skills ({len(cursor_links)}): "
          + ", ".join(sorted(Path(d).name for d in cursor_links)))
-    broken = [d for d, s in {**links, **cursor_links}.items() if not Path(d).exists()]
+    cursor_plugins = state.get("cursor_plugins") or {}
+    info(f"Cursor plugins ({len(cursor_plugins)}): "
+         + ", ".join(sorted(Path(d).name for d in cursor_plugins)))
+    broken = [d for d, s in {**links, **cursor_links, **cursor_plugins}.items() if not Path(d).exists()]
     if broken:
         warn(f"missing installed skills: {', '.join(broken)}")
     c = state.get("claude") or {}
@@ -389,7 +392,8 @@ def cmd_doctor(args) -> int:
         warn(str(e))
         problems += 1
     # A moved checkout leaves symlinks that still look installed; only resolving them shows it.
-    link_dests = list(state.get("links") or {}) + list(state.get("cursor_links") or {})
+    link_dests = (list(state.get("links") or {}) + list(state.get("cursor_links") or {})
+                  + list(state.get("cursor_plugins") or {}))
     link_dests += list(((state.get("claude") or {}).get("generated_links") or {}).values())
     broken = sorted(str(p) for p in link_dests if not Path(p).exists())
     if broken:

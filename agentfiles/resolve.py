@@ -42,6 +42,7 @@ class Plugin:
     claude: "ClaudeNative | None" = None
     # MCP servers the plugin declares, in neutral (Agent Plugins) shape with paths made absolute
     mcp: dict = field(default_factory=dict)
+    cursor_native: bool = False       # copy the plugin into ~/.cursor/plugins/local
 
     @property
     def blocked(self) -> set[str]:
@@ -200,6 +201,10 @@ def resolve_plugin(item: Item, tree: Path) -> Plugin:
             entry={k: v for k, v in (claude_entry or {}).items() if k not in ("name", "source", "skills")},
             skills=[sk.path for sk in plugin.skills] if explicit_skills else None,
         )
+    # Cursor's root plugin.json loads skills and MCP only. A .cursor-plugin/plugin.json is what
+    # loads agents, commands and hooks. Hooks run code, so they need the same allow: as Claude.
+    plugin.cursor_native = (
+        (root / ".cursor-plugin" / "plugin.json").is_file() and "hooks" not in plugin.blocked)
     return plugin
 
 

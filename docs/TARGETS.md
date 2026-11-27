@@ -27,6 +27,12 @@ symlinks are refused or break that path. `sync` re-copies on every run (and repl
 older agentfiles symlinks), so edits in a local `path:` source appear after the next sync.
 `uninstall` removes only the copies recorded in state.
 
+A plugin with `.cursor-plugin/plugin.json` is also copied, as a real directory, to
+`~/.cursor/plugins/local/<name>` (global sync only). That is what loads its agents, commands
+and hooks. Cursor skips a symlink in that folder when the target sits outside it. Its skills
+are not also copied to `~/.cursor/skills`, or Cursor would list them twice. Hooks still need
+`allow:`, the same gate as Claude Code. A project sync does not install these plugins.
+
 Official Cursor docs also list `~/.agents/skills`, but agentfiles does **not** also install
 Cursor skills there — Cursor discovers both roots, so dual install would list each skill
 twice (same reason agentfiles never writes `~/.claude/skills`).
