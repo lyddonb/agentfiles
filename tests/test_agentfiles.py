@@ -212,6 +212,24 @@ class SyncTests(Fixture):
         self.assertIn("no longer resolve", out)
         self.assertIn(str(self.home / ".agents" / "skills" / "alpha"), out)
 
+    def test_doctor_ignores_an_unmanaged_skill_in_both_dirs(self):
+        skill(self.home / ".agents" / "skills", "rex")
+        skill(self.home / ".claude" / "skills", "rex")
+        code, out = self.run_cli("doctor")
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("rex", out)
+
+    def test_doctor_flags_a_managed_skill_also_in_claude_skills(self):
+        code, out = self.run_cli("sync", "base", "--targets", "codex")
+        self.assertEqual(code, 0, out)
+        skill(self.home / ".claude" / "skills", "alpha")
+        skill(self.home / ".agents" / "skills", "rex")
+        skill(self.home / ".claude" / "skills", "rex")
+        code, out = self.run_cli("doctor")
+        self.assertEqual(code, 1, out)
+        self.assertIn("alpha", out)
+        self.assertNotIn("rex", out)
+
     def test_never_clobbers_unmanaged(self):
         shared = self.home / ".agents" / "skills"
         (shared / "alpha").mkdir(parents=True)
