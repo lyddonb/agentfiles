@@ -348,6 +348,37 @@ class SyncTests(Fixture):
         self.assertIn("Cursor skills (2):", out)
         self.assertIn("alpha", out)
 
+    def test_cursor_plugin_is_a_real_copy_and_its_skills_are_not_duplicated(self):
+        write(self.up / "plugins" / "kit" / ".cursor-plugin" / "plugin.json",
+              '{"name": "kit", "hooks": "hooks/cursor.json"}')
+        write(self.up / "plugins" / "kit" / "agents" / "helper.md",
+              "---\nname: helper\ndescription: Helps. Use when testing.\n---\nDo the thing.\n")
+        write(self.up / "plugins" / "kit" / "hooks" / "cursor.json", '{"hooks": {}}\n')
+        code, out = self.run_cli("sync", "base", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        skills = self.home / ".cursor" / "skills"
+        self.assertEqual(sorted(p.name for p in skills.iterdir()), ["alpha"],
+                         "a Cursor plugin's skills stay in the plugin copy")
+        plugin = self.home / ".cursor" / "plugins" / "local" / "kit"
+        self.assertTrue((plugin / ".cursor-plugin" / "plugin.json").is_file())
+        self.assertTrue((plugin / "agents" / "helper.md").is_file())
+        self.assertTrue((plugin / "skills" / "gamma" / "SKILL.md").is_file())
+        self.assertFalse(any(p.is_symlink() for p in plugin.rglob("*")))
+        self.assertIn("Cursor plugins (1):", self.run_cli("status")[1])
+
+        code, out = self.run_cli("sync", "more", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        self.assertFalse(plugin.exists(), "dropping the plugin removes its Cursor copy")
+        self.assertIn("delta", {p.name for p in skills.iterdir()})
+
+    def test_unallowed_hooks_keep_a_cursor_plugin_as_skills(self):
+        write(self.up / "plugins" / "hooky" / ".cursor-plugin" / "plugin.json", '{"name": "hooky"}')
+        code, out = self.run_cli("sync", "more", "--targets", "cursor")
+        self.assertEqual(code, 0, out)
+        self.assertFalse((self.home / ".cursor" / "plugins" / "local" / "hooky").exists())
+        self.assertTrue((self.home / ".cursor" / "skills" / "delta").is_dir())
+        self.assertIn("only work in Claude Code", out)
+
     def test_cursor_sync_updates_and_uninstall_removes(self):
         self.run_cli("sync", "more", "--targets", "cursor")
         cursor = self.home / ".cursor" / "skills"
