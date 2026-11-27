@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "goal": "Drop the always-on kb rule from the beau profile, as Beau chose in HUMAN_TASKS H14 (option A), after agent-kit R42 found no run given it searched the kb server.",
+  "changed": [
+    "profiles/beau.yaml: the instructions: block with the two kb paragraphs is removed. The kb MCP server entry stays.",
+    "tests/test_agentfiles.py: the assertions on those paragraphs are removed; the server-entry assertions stay.",
+    "docs/PERSONAS.md: the kb row says no always-on instruction tells agents to search.",
+    "ROADMAP R20 and HUMAN_TASKS H14 are marked done, with Beau's words."
+  ],
+  "claims": [
+    {
+      "claim": "A sync of beau writes ~/.claude/rules/agentfiles.md with no kb text, and the kb MCP server is still in the profile.",
+      "verdict": "VERIFIED",
+      "check": "bin/agentfiles sync beau --targets claude-code under a temporary HOME: the rules file has 0 lines matching search_knowledge or knowledge base; bin/agentfiles plan beau on the real HOME shows '= mcp kb' unchanged and the claude-code rules file as updated",
+      "commit": "",
+      "record": "",
+      "remaining": "Beau's own ~/.claude/rules/agentfiles.md changes only after he runs agentfiles sync."
+    },
+    {
+      "claim": "The suite passes and the lock is unchanged.",
+      "verdict": "VERIFIED",
+      "check": "make test (OK), bin/agentfiles lock --frozen",
+      "commit": "",
+      "record": "",
+      "remaining": ""
+    }
+  ],
+  "next": [
+    {
+      "item": "Run agentfiles sync on Beau's machines.",
+      "source": "inferred",
+      "why_now": "Agents read the rules file, not the profile; until sync runs they still get the rule.",
+      "impact": "Every session stops carrying the two kb paragraphs."
+    }
+  ],
+  "release": {
+    "note": "The beau profile no longer tells every agent to search the kb server before design work; the server stays installed for agents asked to use it."
+  }
+}

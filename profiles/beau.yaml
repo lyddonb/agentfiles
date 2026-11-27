@@ -44,23 +44,3 @@ mcp:
       - >-
         PKB_CONFIG_PATH="$HOME/.local/share/curator/pkb/config.yaml"
         exec node "$HOME/code/pkb/packages/mcp-server/dist/index.js"
-
-instructions:
-  - >-
-    Beau's knowledge base is the `kb` MCP server (his saved articles, papers and notes). Before
-    designing something or answering a question about AI engineering, agents, evals or
-    engineering leadership, search it with `search_knowledge`, and say which notes you used with
-    their dates.
-  # The page names are the labels marked `topic_page: true` in curator's config/interests.yaml.
-  # Keep this list in step with them: an agent can't list the pages, and guessed a name that
-  # didn't exist the first time (2026-11-14).
-  - >-
-    A topic's current state is on its topic page. Topic pages are not in the search index, so
-    `search_knowledge` never returns one, and limiting a search to `Knowledge/Topics` returns
-    nothing: read a page with `get_note` on its exact path. The pages are
-    `Knowledge/Topics/<name>.md`, where <name> is one of: AI agents & agent architecture;
-    Harness engineering; Evals & LLM-as-judge; Agent memory & context engineering; Coding agents
-    & AI-assisted development; Engineering leadership & management; Org & team design; Product
-    development process; SaaS business & strategy. If `get_note` says a page isn't there, it
-    hasn't been built yet: search the notes. A note marked older is past its half-life, so weigh
-    it less.
