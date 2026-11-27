@@ -82,6 +82,7 @@ policy:                         # the agent policy (agent-ledger S2), written to
   gates: [prod-data]            # added to the ten default gates
   budgets: {tier2: {usd: 40}}   # lowered; budgets can only go down
   identity: {human: you@github}
+  checks: {commit-gate: enforce}   # off | observe | enforce; a check not named observes
 commands:                       # a command on PATH that runs a script from a pinned source
   ledger: agent-ledger:ci/run_ledger.py
 
@@ -138,6 +139,9 @@ the note when a tool accepts that.
   and `lfs_over_mb` take the lowest value given; `network_allow` only narrows (a host must be in
   every list that sets one); session archiving stays on once any profile turns it on. `identity`
   is not a strictness question: the last profile that sets a field wins. `approvers` is reserved.
+  `checks` takes the highest mode any profile sets (enforce over observe over off), so a machine
+  can turn a check up but not off; a check no profile names is `observe`. A bare `off` works,
+  though YAML reads it as false.
 - `commands`: the last profile that names a command wins.
 
 ### Modes and roles

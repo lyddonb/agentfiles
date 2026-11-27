@@ -1,0 +1,4 @@
+$ make test
+Ran 125 tests in 41.776s
+
+OK

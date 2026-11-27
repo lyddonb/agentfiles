@@ -310,7 +310,9 @@ def _policy_summary(policy: dict) -> str:
     budgets = "; ".join(f"{tier} ${b.get('usd')}, {b.get('tokens')} tokens, {b.get('wall_clock')}, "
                         f"{b.get('max_parallel_agents')} agents"
                         for tier, b in (policy.get("budgets") or {}).items() if isinstance(b, dict))
-    return f"Policy: {len(gates)} gates ({', '.join(gates)}); budgets: {budgets or '(none)'}"
+    checks = ", ".join(f"{c} {m}" for c, m in (policy.get("checks") or {}).items())
+    return (f"Policy: {len(gates)} gates ({', '.join(gates)}); budgets: {budgets or '(none)'}; "
+            f"checks: {checks or 'all observe'}")
 
 
 def cmd_policy(args) -> int:

@@ -46,6 +46,13 @@ class PolicyMergeTest(unittest.TestCase):
         self.assertEqual(p["security"]["sandbox_unattended"], [1, 2, 3])
         self.assertEqual(p["audit"]["sessions"], {"archive": True, "lfs_over_mb": 20}, "archiving can't be turned off")
 
+    def test_a_check_takes_the_strictest_mode_any_profile_sets(self):
+        p = self.merged({"checks": {"commit-gate": "enforce", "stop-checks": "off"}},
+                        {"checks": {"commit-gate": "off", "stop-checks": "observe"}})
+        self.assertEqual(p["checks"], {"commit-gate": "enforce", "stop-checks": "observe"},
+                         "a later profile or local.yaml can raise a check's mode, never lower it")
+        self.assertNotIn("checks", self.merged({}), "no profile sets a check, so every check stays at the default")
+
     def test_identity_is_the_last_word_not_the_strictest(self):
         p = self.merged({"identity": {"human": "a@github"}}, {"identity": {"human": "b@github"}})
         self.assertEqual(p["identity"], {"human": "b@github", "scheduled_owner": "creator"})
@@ -64,7 +71,10 @@ class PolicyMergeTest(unittest.TestCase):
                  ({"security": {"network_allow": ["bad host!"]}}, "host names"),
                  ({"audit": {"sinks": ["s3-object-lock"]}}, "M0"),
                  ({"identity": {"human": "lyddonb"}}, "<login>@github"),
-                 ({"approvers": {"deploy": ["sre"]}}, "reserved"), ({"version": 2}, "version")]
+                 ({"approvers": {"deploy": ["sre"]}}, "reserved"), ({"version": 2}, "version"),
+                 ({"checks": ["commit-gate"]}, "must map"), ({"checks": {"commit-gaet": "enforce"}}, "unknown check"),
+                 ({"checks": {"commit-gate": "block"}}, "off, observe or enforce"),
+                 ({"checks": {"commit-gate": True}}, "off, observe or enforce")]
         for raw, expect in cases:
             with self.subTest(raw=raw), self.assertRaisesRegex(AgentfilesError, expect):
                 parse_policy(raw, "test")
@@ -84,6 +94,13 @@ class PolicyRenderTest(unittest.TestCase):
         p = merge_policy(DEFAULT_POLICY, parse_policy({"identity": {"human": "redact_patterns@github"}}, "t"))
         with self.assertRaisesRegex(AgentfilesError, "outside its own key"):
             render_policy(["t"], p)
+
+    def test_checks_render_as_plain_lines_a_hook_can_read_without_yaml(self):
+        p = merge_policy(DEFAULT_POLICY, parse_policy({"checks": {"stop-checks": "enforce", "commit-gate": "observe"}}, "t"))
+        text = render_policy(["t"], p)
+        self.assertEqual(yaml.safe_load(text), p)
+        self.assertTrue(text.endswith("checks:\n  commit-gate: 'observe'\n  stop-checks: 'enforce'\n"), text)
+        self.assertNotIn("checks:", render_policy(["t"], DEFAULT_POLICY), "no checks key means every check observes")
 
     def test_tricky_values_still_read_back(self):
         p = merge_policy(DEFAULT_POLICY, parse_policy(
@@ -120,6 +137,11 @@ class ProjectPolicyCheckTest(Fixture):
                 problems = self.check(text)
                 self.assertTrue(any(expect in p for p in problems), problems)
         self.assertEqual(self.check("budgets:\n  tier2: {usd: 10}\nsecurity:\n  network_allow: [github.com]\n"), [])
+
+    def test_a_project_may_set_a_check_lower_and_yours_still_applies(self):
+        user = merge_policy(DEFAULT_POLICY, {"checks": {"commit-gate": "enforce"}})
+        self.assertEqual(self.check("checks:\n  commit-gate: observe\n", user), [])
+        self.assertIn("unknown check", self.check("checks:\n  commit-gaet: enforce\n", user)[0])
 
     def test_no_gate_list_keeps_every_gate(self):
         self.assertEqual(self.check("budgets:\n  tier2: {usd: 20}\n"), [])
@@ -169,6 +191,15 @@ class PolicySyncTest(Fixture):
     def test_profiles_without_policy_write_none(self):
         self.sync("base")
         self.assertFalse(self.policy.exists())
+
+    def test_local_yaml_can_raise_a_check_but_not_lower_one(self):
+        committed = (self.repo / "agentfiles.yaml").read_text()
+        (self.repo / "agentfiles.yaml").write_text(committed + "policy:\n  checks: {commit-gate: enforce}\n")
+        write(self.repo / "local.yaml", "policy:\n  checks: {commit-gate: off, stop-checks: enforce}\n")
+        self.sync("base")
+        self.assertEqual(yaml.safe_load(self.policy.read_text())["checks"],
+                         {"commit-gate": "enforce", "stop-checks": "enforce"})
+        self.assertIn("checks: commit-gate enforce, stop-checks enforce", self.run_cli("status")[1])
 
     def test_local_yaml_can_lower_a_budget_but_not_raise_one(self):
         write(self.repo / "local.yaml", "policy:\n  budgets: {tier2: {usd: 10, tokens: 999999999}}\n")
