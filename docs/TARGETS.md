@@ -42,8 +42,9 @@ targets get a clean `~/.cursor/skills` install with nothing under `~/.agents/ski
 Agents `/` pick up personal skills.
 
 agentfiles never writes to `~/.claude/skills`: Cursor and OpenCode read it *as well as*
-`~/.agents/skills`, so skills placed in both show up twice. `agentfiles doctor` warns if it
-finds the same skill in both.
+`~/.agents/skills`, so skills placed in both show up twice. `agentfiles doctor` warns and
+exits 1 only when a skill from the last sync is also in `~/.claude/skills`, and leaves a
+skill it does not manage alone.
 
 ## Claude Code
 

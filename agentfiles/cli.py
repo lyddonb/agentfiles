@@ -351,8 +351,15 @@ def cmd_doctor(args) -> int:
     shared = home / ".agents" / "skills"
     cursor_dir = home / ".cursor" / "skills"
     claude_dir = home / ".claude" / "skills"
+    state = read_json(state_dir() / "state.json", default={}) or {}
     if shared.is_dir() and claude_dir.is_dir():
-        dup = sorted({p.name for p in shared.iterdir()} & {p.name for p in claude_dir.iterdir()})
+        # A skill agentfiles does not manage can live in both directories. Only a
+        # name from the last sync (a links key under ~/.agents/skills) is a failure:
+        # Cursor and OpenCode would list that installed skill twice.
+        links = state.get("links") or {}
+        managed = {Path(dest).name for dest in links if Path(dest).parent == shared}
+        overlap = {p.name for p in shared.iterdir()} & {p.name for p in claude_dir.iterdir()}
+        dup = sorted(overlap & managed)
         if dup:
             warn(f"skills in both ~/.agents/skills and ~/.claude/skills (Cursor/OpenCode will see "
                  f"duplicates): {', '.join(dup)}")
@@ -380,7 +387,6 @@ def cmd_doctor(args) -> int:
         warn(str(e))
         problems += 1
     # A moved checkout leaves symlinks that still look installed; only resolving them shows it.
-    state = read_json(state_dir() / "state.json", default={}) or {}
     link_dests = list(state.get("links") or {}) + list(state.get("cursor_links") or {})
     link_dests += list(((state.get("claude") or {}).get("generated_links") or {}).values())
     broken = sorted(str(p) for p in link_dests if not Path(p).exists())
