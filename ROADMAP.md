@@ -183,10 +183,12 @@ agent-kit's `verify-kit` skill (its R27) calls it.
 **Why not done:** How each tool reports its loaded skills is not confirmed outside Claude Code
 (R0). Settle that by prototype per tool.
 **Depends on:** R0 and H4 for Codex, Cursor, OpenCode and pi. The Claude Code half needs neither.
-**Done when:** the check fails for a skill whose YAML header is broken in a way agent-kit's
-`tools/validate.py` accepts, and passes after a clean sync of `base`.
+**Done when:** for each tool, the check fails after a sync of a skill whose header has no usable
+`description` (sync installs it; the tool doesn't list it as a skill), and passes after a clean
+sync of `base`. Reworded 2026-11-27 (Beau: "Use the no-description case"): on Claude Code 2.1.325
+every header that keeps a skill from loading also fails agent-kit's `tools/validate.py`.
 **Prioritize when:** with R0 or R11.
-**Status (2026-11-27):** the Claude Code half is built. `doctor` reads Claude Code's `init` event
+**Status (2026-11-27):** the Claude Code half is done (pull requests 39 and 40). `doctor` reads Claude Code's `init` event
 (`claude -p --output-format stream-json --verbose`, killed before any model call) and compares
 its plugins and skills with the plugins and skill folders the last sync installed in
 `agentfiles-local`. Expected comes from the sync state, not the lock: the lock also pins plugins
@@ -194,12 +196,11 @@ a user may have installed from another marketplace instead, so a lock-based chec
 healthy machine. Measured on Claude
 Code 2.1.325 over about 35 header variants: a skill is named by its folder, and it is listed as
 a slash command and not as a skill when its header has no usable string `description`.
-`resolve.py` installs such a skill without a word, so this is the check that sees it. The first
-clause of the Done when can't be met as worded: every header that drops a skill also fails
-agent-kit's `tools/validate.py`, and the one header validate accepts that hides a skill,
-`user-invocable: false`, is deliberate (doctor prints it as a note). The proof uses an upstream
-skill with no description instead, which sync installs and validate would reject. Codex,
-Cursor, OpenCode and pi still wait on R0 and H4.
+`resolve.py` installs such a skill without a word, so this is the check that sees it. The one
+header validate accepts that hides a skill, `user-invocable: false`, is deliberate, and doctor
+prints it as a note. The Done when is met for Claude Code by
+`.changes/2026-11-27-r16-doctor-claude-code/proof.sh`. Codex, Cursor, OpenCode and pi still
+wait on R0 and H4.
 
 ### R17. Upstream skills pass the lint at `agentfiles update` — Done
 `update` lints each skill a source update changes and prints each new finding under the commit
